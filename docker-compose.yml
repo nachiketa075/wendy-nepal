@@ -1,0 +1,84 @@
+# Local development stack: PostgreSQL + FastAPI (auto-reload) + Vite dev server.
+# Copy .env.example to .env and set POSTGRES_PASSWORD before starting.
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wendy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (see .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-wendy}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        REQUIREMENTS: requirements-dev.txt
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-wendy}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-wendy}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
+    volumes:
+      - ./backend:/app
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+
+  # --- Tests: `docker compose --profile test run --rm tests` ---
+  # Uses its own throwaway database so development data is never touched.
+  db-test:
+    image: postgres:18
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: wendy_test
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: wendy_test
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wendy_test -d wendy_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  tests:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      args:
+        REQUIREMENTS: requirements-dev.txt
+    command: python -m pytest -q
+    environment:
+      TEST_DATABASE_URL: postgresql+psycopg://wendy_test:${POSTGRES_PASSWORD}@db-test:5432/wendy_test
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db-test:
+        condition: service_healthy
+
+volumes:
+  db-data:
