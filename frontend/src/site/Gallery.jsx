@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { GALLERY_FILTERS, PHOTOS, photoSrc } from '../lib/gallery.js'
-import { SOURCES } from '../lib/business.js'
+import { BUSINESS } from '../lib/business.js'
+import { GALLERY_FILTERS, PHOTOS, photoOriginal, photoSrc, photoSrcSet } from '../lib/gallery.js'
 import { ExternalLink, Reveal, SafeImage } from './ui.jsx'
 
 export default function Gallery() {
@@ -12,13 +12,13 @@ export default function Gallery() {
     <section id="gallery" className="section">
       <Reveal className="mb-[25px] md:mb-[37px] md:flex md:items-end md:justify-between md:gap-10">
         <div>
-          <p className="eyebrow">Little moments, big flavour</p>
+          <p className="kicker">Little moments, big flavour</p>
           <h2 className="h2">
             A taste of <em>Wendy.</em>
           </h2>
         </div>
-        <ExternalLink href={SOURCES.tripadvisor} className="textlink mt-5 inline-block md:mt-0">
-          Explore guest photos
+        <ExternalLink href={BUSINESS.facebookUrl} className="textlink mt-5 inline-block md:mt-0">
+          More on Facebook
         </ExternalLink>
       </Reveal>
 
@@ -30,38 +30,34 @@ export default function Gallery() {
         ))}
       </div>
 
-      <ul className="grid grid-cols-2 gap-[13px] md:gap-[22px] lg:grid-cols-4">
+      {/* Columns keep every photo at its own shape, so no face or dish is cropped. */}
+      <ul className="columns-2 gap-[13px] md:gap-[22px] lg:columns-3 xl:columns-4">
         {photos.map((photo, index) => (
-          <li key={`${filter}-${photo.id}`} className="appear">
+          <li key={`${filter}-${photo.id}`} className="appear mb-[18px] break-inside-avoid md:mb-[26px]">
             <figure>
               <button
                 type="button"
                 onClick={() => setOpenIndex(index)}
                 aria-label={`View photo: ${photo.caption}`}
-                className="group block h-[190px] w-full overflow-hidden rounded-[5px] bg-[#c8cbb3] sm:h-[260px] lg:h-[300px]"
+                className="photo-frame group block w-full"
+                style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
               >
                 <SafeImage
-                  src={photoSrc(photo)}
+                  src={photoSrc(photo, 720)}
+                  srcSet={photoSrcSet(photo)}
+                  sizes="(min-width: 1280px) 22vw, (min-width: 1024px) 29vw, 44vw"
                   width={photo.width}
                   height={photo.height}
                   loading="lazy"
                   alt={photo.alt}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
               </button>
-              <figcaption className="pt-3 font-display text-[17px] italic leading-snug md:pt-4 md:text-xl">
-                {photo.caption}
-                <span className="mt-1 block font-sans text-[11px] not-italic opacity-65">{photo.credit}</span>
-              </figcaption>
+              <figcaption className="pt-2 font-display text-[15px] italic leading-snug md:pt-3 md:text-lg">{photo.caption}</figcaption>
             </figure>
           </li>
         ))}
       </ul>
-
-      <p className="mt-6 max-w-3xl text-xs opacity-75">
-        These are the photos of Wendy we could source with a traceable origin. They were taken by guests and listing
-        sites, and are shown with credit while the shop arranges its own.
-      </p>
 
       {openIndex !== null && photos[openIndex] && (
         <Lightbox photos={photos} index={openIndex} onIndex={setOpenIndex} onClose={() => setOpenIndex(null)} />
@@ -73,13 +69,11 @@ export default function Gallery() {
 function Lightbox({ photos, index, onIndex, onClose }) {
   const dialogRef = useRef(null)
   const closeRef = useRef(null)
-  const [zoomed, setZoomed] = useState(false)
   const photo = photos[index]
   const many = photos.length > 1
 
   const step = useCallback(
     (delta) => {
-      setZoomed(false)
       onIndex((index + delta + photos.length) % photos.length)
     },
     [index, photos.length, onIndex],
@@ -132,12 +126,7 @@ function Lightbox({ photos, index, onIndex, onClose }) {
           {index + 1} / {photos.length}
         </p>
         <div className="flex flex-wrap gap-2">
-          {photo.zoomable && (
-            <button type="button" className={control} aria-pressed={zoomed} onClick={() => setZoomed((z) => !z)}>
-              {zoomed ? 'Fit to screen' : 'Zoom in to read'}
-            </button>
-          )}
-          <a className={control} href={photoSrc(photo, 'jpg')} target="_blank" rel="noopener noreferrer">
+          <a className={control} href={photoOriginal(photo)} target="_blank" rel="noopener noreferrer">
             Open full size<span className="sr-only"> (opens in a new tab)</span>
           </a>
           <button ref={closeRef} type="button" className={control} onClick={onClose}>
@@ -146,33 +135,21 @@ function Lightbox({ photos, index, onIndex, onClose }) {
         </div>
       </div>
 
-      <div
-        className={`my-4 min-h-0 flex-1 ${zoomed ? 'overflow-auto' : 'flex items-center justify-center overflow-hidden'}`}
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-        tabIndex={zoomed ? 0 : undefined}
-        aria-label={zoomed ? 'Zoomed photo, scroll to move around' : undefined}
-      >
+      <div className="my-4 flex min-h-0 flex-1 items-center justify-center overflow-hidden" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <img
           key={photo.id}
           src={photoSrc(photo)}
           alt={photo.alt}
           width={photo.width}
           height={photo.height}
-          style={zoomed ? { width: photo.width * 2, maxWidth: 'none', height: 'auto' } : { maxWidth: `min(100%, ${photo.width}px)` }}
-          className={zoomed ? 'rounded-[5px]' : 'max-h-full w-auto rounded-[5px] object-contain'}
+          style={{ maxWidth: `min(100%, ${photo.width}px)` }}
+          className="max-h-full w-auto rounded-[5px] object-contain"
         />
       </div>
 
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="font-display text-xl italic md:text-2xl">{photo.caption}</p>
-          {photo.note && <p className="mt-1 max-w-2xl text-sm text-citrus">{photo.note}</p>}
-          <p className="mt-1 text-xs opacity-75">
-            {photo.credit} ·{' '}
-            <a className="underline" href={photo.sourceUrl} target="_blank" rel="noopener noreferrer">
-              source<span className="sr-only"> (opens in a new tab)</span>
-            </a>
-          </p>
         </div>
         {many && (
           <div className="flex shrink-0 gap-2">

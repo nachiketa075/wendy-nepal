@@ -1,4 +1,7 @@
+import { photoById, photoSrc, photoSrcSet } from '../lib/gallery.js'
 import { SafeImage } from './ui.jsx'
+
+const heroPhoto = photoById('fruit-bowl-close-up')
 
 export function Hero() {
   return (
@@ -41,13 +44,13 @@ export function Hero() {
       </div>
       <div className="relative mx-[6%] mb-[25px] h-[420px] overflow-hidden rounded-[160px_160px_6px_6px] bg-[#c8cbb3] md:my-[23px] md:ml-0 md:mr-6 md:h-auto md:rounded-[180px_180px_8px_8px]">
         <SafeImage
-          src="/images/wendy-fruit-yogurt-bowl.webp"
-          srcSet="/images/wendy-fruit-yogurt-bowl-640.webp 640w, /images/wendy-fruit-yogurt-bowl.webp 1024w"
+          src={photoSrc(heroPhoto)}
+          srcSet={photoSrcSet(heroPhoto)}
           sizes="(min-width: 768px) 50vw, 88vw"
-          width="1024"
-          height="1365"
+          width={heroPhoto.width}
+          height={heroPhoto.height}
           fetchpriority="high"
-          alt="A bowl of fresh fruit with yogurt and pomegranate seeds served at Wendy Juice Shop in Pokhara"
+          alt={heroPhoto.alt}
           className="absolute inset-0 h-full w-full object-cover"
         />
         <div className="absolute bottom-[25px] left-[25px] -rotate-[4deg] rounded-[5px] bg-cream px-[25px] py-[15px] font-display text-2xl">

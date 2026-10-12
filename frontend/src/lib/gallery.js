@@ -1,65 +1,130 @@
-import { SOURCES } from './business.js'
-
-// Every photo here is listed in docs/ASSET_MANIFEST.md with its source and
-// permission status. Sizes are the real pixel sizes so nothing is upscaled.
+// The 13 photographs supplied by the shop on 10 Oct 2026. Each is recorded in
+// docs/ASSET_MANIFEST.md. Sizes are the real pixel sizes; nothing is upscaled.
+// People are described, never named.
 export const GALLERY_FILTERS = [
   { id: 'all', label: 'Everything' },
   { id: 'food', label: 'Food & drinks' },
   { id: 'interior', label: 'Inside' },
   { id: 'exterior', label: 'Outside' },
-  { id: 'menu', label: 'Menu board' },
-  { id: 'historical', label: 'From the archive' },
+  { id: 'guests', label: 'Guests & moments' },
 ]
+
+const L = { width: 1600, height: 1200 }
+const P = { width: 1200, height: 1600 }
 
 export const PHOTOS = [
   {
-    id: 'fruit-yogurt-bowl',
-    file: 'wendy-fruit-yogurt-bowl',
-    width: 1024,
-    height: 1365,
+    id: 'fruit-bowl-close-up',
+    file: 'wendy-fruit-bowl-close-up',
+    ...P,
     tags: ['food'],
     caption: 'Fresh starts, happy days.',
-    alt: 'A white bowl of chopped fresh fruit topped with yogurt and pomegranate seeds on a wooden table at Wendy Juice Shop',
-    credit: 'Guest photo via HappyCow',
-    sourceUrl: SOURCES.happycow,
+    alt: 'A fruit bowl seen from above, topped with apple slices, orange segments, watermelon, pomegranate seeds, raisins and a sprig of mint',
   },
   {
-    id: 'interior-chalkboard-menu',
-    file: 'wendy-interior-chalkboard-menu',
-    width: 1024,
-    height: 768,
-    tags: ['interior', 'menu'],
-    caption: 'The chalkboard, the juicer, the cups.',
-    alt: 'Inside Wendy Juice Shop: a wood-framed chalkboard menu under a woven lamp, above a counter with a juicer, blender and cups, beside a stone wall',
-    note: 'Prices on the board are from an undated guest photo and may not be current. Please ask us for today’s prices.',
-    credit: 'Guest photo via HappyCow',
-    sourceUrl: SOURCES.happycow,
-    zoomable: true,
+    id: 'breakfast-plate-and-drinks',
+    file: 'wendy-breakfast-plate-and-drinks',
+    ...P,
+    tags: ['food'],
+    caption: 'Breakfast, the slow way.',
+    alt: 'A breakfast plate with toast, butter, jam and sautéed vegetables beside a fruit bowl, a small bowl of watermelon and a red juice',
   },
   {
-    id: 'exterior-evening',
-    file: 'wendy-exterior-evening',
-    width: 553,
-    height: 367,
-    tags: ['exterior', 'historical'],
-    caption: 'Lights on at dusk.',
-    alt: 'An evening street view of a small shop signed “Wendy Juice & Fruit Shop”, with a lit fruit counter, a yellow awning and outdoor tables',
-    note: 'An undated photo from a public listing. The shop may look different today.',
-    credit: 'Listing photo via Restaurant Guru',
-    sourceUrl: SOURCES.restaurantguru,
+    id: 'interior-stone-seating-area',
+    file: 'wendy-interior-stone-seating-area',
+    ...L,
+    tags: ['interior'],
+    caption: 'Stone walls, soft seats.',
+    alt: 'The seating area at Wendy Juice Shop: stone walls, wooden sofas with grey cushions, woven lamps and guests reading and chatting at their tables',
   },
   {
-    id: 'historical-fruit-counter',
-    file: 'wendy-historical-fruit-counter',
-    width: 500,
-    height: 400,
-    tags: ['historical'],
-    caption: 'An earlier chapter at Wendy.',
-    alt: 'An older photograph of Wendy Juice Shop’s original fruit counter, with shelves of pineapples, apples and pomegranates and two people at the counter',
-    note: 'A historical photo, not the current shopfront.',
-    credit: 'Guest photo via Tripadvisor',
-    sourceUrl: SOURCES.tripadvisor,
+    id: 'exterior-signboard',
+    file: 'wendy-exterior-signboard',
+    ...L,
+    tags: ['exterior'],
+    caption: 'Look for the black sign.',
+    alt: 'The stone building of Wendy Juice Shop from the street, with a black signboard reading Nepali Cottage Guest House and Wendy Juice Shop',
+  },
+  {
+    id: 'guest-holding-fruit-yogurt-bowl',
+    file: 'wendy-guest-holding-fruit-yogurt-bowl',
+    ...P,
+    tags: ['guests'],
+    caption: 'A bowl worth smiling about.',
+    alt: 'A smiling guest on a sofa holding a bowl of fruit and yogurt topped with orange and pomegranate',
+  },
+  {
+    id: 'guests-sharing-breakfast',
+    file: 'wendy-guests-sharing-breakfast',
+    ...L,
+    tags: ['guests'],
+    caption: 'Morning light, full table.',
+    alt: 'Four guests smiling around a table covered with omelettes, toast, fruit salad and tea in the morning sun',
+  },
+  {
+    id: 'group-waving-in-seating-area',
+    file: 'wendy-group-waving-in-seating-area',
+    ...L,
+    tags: ['guests', 'interior'],
+    caption: 'Room for the whole group.',
+    alt: 'A large group of guests waving and giving thumbs up from the sofas in the stone-walled seating area',
+  },
+  {
+    id: 'guests-toasting-with-tea',
+    file: 'wendy-guests-toasting-with-tea',
+    ...L,
+    tags: ['guests'],
+    caption: 'Cheers to milk tea.',
+    alt: 'Five guests at a window table raising glasses of milk tea towards the camera',
+  },
+  {
+    id: 'guest-with-juice-and-fruit-bowl',
+    file: 'wendy-guest-with-juice-and-fruit-bowl',
+    ...P,
+    tags: ['guests'],
+    caption: 'Juice first, then the bowl.',
+    alt: 'A guest smiling at a window table behind a tall glass of yellow juice and a fruit-topped bowl',
+  },
+  {
+    id: 'guests-with-lassi-evening',
+    file: 'wendy-guests-with-lassi-evening',
+    ...L,
+    tags: ['guests'],
+    caption: 'An evening round.',
+    alt: 'Two guests on a cushioned bench raising tall glasses of lassi in the evening',
+  },
+  {
+    id: 'guests-selfie-at-window-table',
+    file: 'wendy-guests-selfie-at-window-table',
+    ...L,
+    tags: ['guests'],
+    caption: 'One for the album.',
+    alt: 'Two guests taking a selfie at a table by the stone wall, with a glass of juice and a fruit bowl',
+  },
+  {
+    id: 'group-cheering-in-seating-area',
+    file: 'wendy-group-cheering-in-seating-area',
+    ...L,
+    tags: ['guests', 'interior'],
+    caption: 'Hands up for a good morning.',
+    alt: 'A large group of guests cheering with raised hands from the sofas in the seating area',
+  },
+  {
+    id: 'guest-with-juice-and-fruit-bowl-closer',
+    file: 'wendy-guest-with-juice-and-fruit-bowl-closer',
+    ...P,
+    tags: ['guests'],
+    caption: 'Fruit, juice, and time to enjoy it.',
+    alt: 'A closer view of a smiling guest with a glass of yellow juice and a bowl topped with apple, watermelon, banana and nuts',
   },
 ]
 
-export const photoSrc = (photo, ext = 'webp') => `/images/${photo.file}.${ext}`
+export const photoById = (id) => PHOTOS.find((p) => p.id === id)
+/** Optimised display copy; pass 720 for the smaller variant. */
+export const photoSrc = (photo, size) => `/images/${photo.file}${size ? `-${size}` : ''}.webp`
+/** The untouched original as supplied. */
+export const photoOriginal = (photo) => `/images/original/${photo.file}.jpg`
+export const photoSrcSet = (photo) => {
+  const small = Math.round((Math.max(photo.width, photo.height) === photo.width ? 720 : (720 * photo.width) / photo.height))
+  return `${photoSrc(photo, 720)} ${small}w, ${photoSrc(photo)} ${photo.width}w`
+}

@@ -1,31 +1,53 @@
 # Details that need the owner's confirmation
 
-Nothing below is presented on the site as a confirmed fact. Each item says what the site does in the meantime.
+Last updated: 12 October 2026.
 
-## Must be settled before the site goes live
+## Confirmed since the first version
 
-| # | What we need | Why | What the site does until then |
+- **Phone and WhatsApp:** +977 985-6031094 (also on the shop's signboard).
+- **Menu and prices:** the printed menu `CM.pdf` is now the public menu.
+- **Photographs:** thirteen photos supplied by the shop replace the earlier third-party ones.
+
+## Questions about the printed menu
+
+The website shows the menu **exactly as printed**. Nothing below was corrected or guessed. Please tell us what
+each should say.
+
+| # | Where | What is printed | Question |
 |---|---|---|---|
-| 1 | **Booking windows, group sizes, notice period and how far ahead guests may book** | The seeded values are placeholders invented for the demo (every day 8:00 AM–6:00 PM, 1–8 guests, 2 hours' notice, 30 days ahead, half-hour steps). They were *not* taken from any listing. | In production, the booking form stays closed until the owner reviews them in **Owner dashboard → Booking settings**, ticks the confirmation box and saves. |
-| 2 | **Permission for the four photographs** (see `ASSET_MANIFEST.md`) | They are guest/listing photos with no confirmed licence. One shows two identifiable people. | Shown with source credit. Replace or clear them before publishing. |
-| 3 | **Opening hours** | Listings disagree: Google 6:00 AM–10:00 PM, Tripadvisor 6:00 AM–9:00 PM, HappyCow 6:30 AM–8:00 PM, and a Trip.com listing found during checking shows 8:00 AM–9:00 PM. | The site says "Call for today's opening hours." No hours are displayed. |
-| 4 | **The menu: items, wording and prices** | Items come from public listings and from an undated guest photo of the chalkboard. The board showed prices, but their date is unknown so none were entered. | Every item carries a small source tag and no price. Edit in **Owner dashboard → Menu**; a price appears (as NPR) only once the owner types one in. |
-| 5 | **Contact details**: +977 985-6031094, kushwaha_3@hotmail.com, Pahari Marga / 15th Street, Lakeside, Pokhara 33700 | Taken from the brief. One listing gives the street differently. | Shown as given. |
+| 1 | Brunch → **Vegan Porridge** (Rs. 450) | Description reads "Sourdough Toast, Avocado, Cherry Tomatoes" | That describes toast, not porridge. What is the right description (or the right dish name)? |
+| 2 | **Rice Bowl** section | Lists "Vegan Buddha Bowl Rs. 600" and "Chicken Buddha Bowl Rs. 680", identical to the Buddha Bowl section | What are the actual rice bowls and their prices? |
+| 3 | Brunch → **Cheese Frittata** (Rs. 500) | Description ends "…fresh vegetables, sausages" | Does the frittata include sausages? Its name suggests a vegetarian dish. |
+| 4 | Smoothie → **Matcha Muse** | "Match Powder" | Should this read "Matcha Powder"? |
+| 5 | Smoothie → **Banananut Smoothie** | "Coco Powder" | Cocoa powder or coconut powder? |
+| 6 | Brunch → **Vegan Breakfast** | "fruit salad" appears twice in the description | Remove the repeat? |
+| 7 | Fresh Juice | "Banana lassi 180" is listed under Fresh Juice; Lassi/Milkshake also has "Banana 180" | Is this intended? |
+| 8 | Brunch → **Oatmeal Pancake** | Described as "creamy banana oats made with milk…" | Is this a pancake or an oat bowl? |
 
-## Could not be verified, so left off the site
+No dietary or allergen labels (vegan, gluten-free, nut-free and so on) have been added, because the menu does
+not state them beyond the dish names.
 
-| Item | Reported value | What was found when checking (10 Oct 2026) |
+## Still needed before the site goes live
+
+| # | What we need | What the site does until then |
 |---|---|---|
-| Google rating | 4.7/5 from 292 reviews | Could not be checked automatically. Not shown. |
-| Tripadvisor rating | 4.9/5 from 176 reviews | Tripadvisor blocked automated access. Not shown. |
-| Family-business history | "Since 1986, renovated in 2022" | Not confirmed by any source reached; one listing summary says fruit and juice have been sold "since 1985". The story section therefore gives no dates. |
-| Price range | Rs 500–1,000 (Google) | A general range, not menu pricing. Not shown. |
+| 1 | **Booking windows, group sizes, notice period, how far ahead.** The seeded values are placeholders (every day 8:00 AM–6:00 PM, 1–8 guests, 2 hours' notice, 30 days ahead). | In production the booking form stays closed until the owner confirms them in Owner dashboard → Booking settings. |
+| 2 | **Opening hours.** Public listings disagree. | "Call for today's opening hours." No hours are shown. |
+| 3 | **Consent from the guests in the photos.** Eleven of the thirteen photos show identifiable people, and one includes children. | All thirteen are in the gallery as requested. Any can be removed in one line of `frontend/src/lib/gallery.js`. |
+| 4 | **Address.** The site shows "Pahari Marga / 15th Street, Lakeside, Pokhara 33700, Nepal". | Shown as given. |
+| 5 | **Ratings and history** (Google 4.7/292, Tripadvisor 4.9/176, "since 1986"). Could not be verified. | Not shown. |
 
-If the owner confirms ratings, the site should show them with the platform name and the date they were checked.
+## Things to know about this stage
+
+- **The owner's menu editor does not change the public menu yet.** The website shows the printed menu; the
+  editor changes the separate database menu. The dashboard says so. They will be joined in the backend stage.
+- **Customer and staff sign-in are not switched on.** Their pages explain this and accept nothing.
+- **Employee permissions are a design preview only.** Nothing is saved or enforced yet.
+- **WhatsApp** opens a chat with the shop. It does not send or confirm a table request.
+- **No notifications, no table-capacity tracking, no payments, no food ordering.**
 
 ## Decisions for the owner
 
-- **Who gets a dashboard login?** Accounts are created from the command line (see README); there is no sign-up page.
-- **How will guests be told the outcome?** The site sends no email, SMS or WhatsApp. Staff contact the guest themselves and record the result in the dashboard. Automatic messages would need a provider account and extra work.
-- **How long should guest contact details be kept?** Nothing is deleted automatically at present. The booking form tells guests they can ask for removal.
-- **Should table capacity be tracked?** It is not. The dashboard never stops the owner confirming more requests than there are tables; checking availability is the owner's job, and the site never claims real-time availability.
+- How should customers sign in later: email and password, phone and one-time code, or Google? Each needs its own setup.
+- Which permissions should a new employee have by default?
+- How long should guest contact details be kept?

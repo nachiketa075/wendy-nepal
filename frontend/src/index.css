@@ -53,6 +53,14 @@
   .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
   .reveal.is-visible { opacity: 1; transform: none; }
   .appear { animation: appear 0.3s; }
+
+  /* Small-caps label with a fine rule, used on the menu pages. */
+  .kicker { @apply mb-5 flex items-center gap-4 text-[11px] font-semibold uppercase tracking-[3px]; }
+  .kicker::before { content: ''; @apply h-px w-10 bg-current opacity-50; }
+  /* Dotted line between a dish and its price, as on a printed menu. */
+  .leader { @apply mx-3 mb-[6px] min-w-[20px] flex-1 border-b border-dotted border-forest/35; }
+  .photo-frame { @apply overflow-hidden rounded-[5px] bg-[#c8cbb3] shadow-[0_18px_40px_-22px_rgba(22,61,45,0.55)] transition-shadow duration-500; }
+  .photo-frame:hover { @apply shadow-[0_26px_50px_-22px_rgba(22,61,45,0.7)]; }
 }
 
 @keyframes appear {

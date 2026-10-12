@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
+import { MENU_PDF_URL } from '../lib/business.js'
+import { MENU_SOURCE } from '../lib/menuService.js'
 
 const SOURCE_NOTE = {
   listing: 'From a public listing — please check it is right.',
@@ -54,10 +56,23 @@ export default function MenuPanel({ onAuthError }) {
       <h1 id="menu-title" className="mb-2 text-[40px]">
         Menu
       </h1>
-      <p className="mb-6 max-w-2xl text-sm opacity-80">
-        Changes appear on the website as soon as you save. A price is only shown to guests when you enter one here, and
-        is displayed in NPR. Leave it empty to show no price.
-      </p>
+      {MENU_SOURCE === 'pdf' ? (
+        <div role="note" className="mb-6 max-w-3xl rounded-[5px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
+          <strong>Changes made here do not show on the website at the moment.</strong> The public menu is currently taken
+          from your printed menu (
+          <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
+            PDF
+          </a>
+          ), while this editor changes the separate menu stored in the database. Your edits are saved, but guests will not
+          see them until the two are joined up in the next stage of work. To change the public menu before then, send us the
+          updated menu.
+        </div>
+      ) : (
+        <p className="mb-6 max-w-2xl text-sm opacity-80">
+          Changes appear on the website as soon as you save. A price is only shown to guests when you enter one here.
+          Leave it empty to show no price.
+        </p>
+      )}
       {error && (
         <p role="alert" className="sticky top-2 z-10 mb-5 rounded-lg border border-berry/40 bg-cream p-3 text-sm font-medium text-berry">
           {error}

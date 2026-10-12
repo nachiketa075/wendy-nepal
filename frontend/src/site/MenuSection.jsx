@@ -1,114 +1,93 @@
 import { useEffect, useState } from 'react'
-import { api } from '../lib/api.js'
-import { BUSINESS } from '../lib/business.js'
-import { Reveal } from './ui.jsx'
+import { Link } from 'react-router-dom'
+import { BUSINESS, formatPrice } from '../lib/business.js'
+import { photoById, photoSrc } from '../lib/gallery.js'
+import { loadMenu } from '../lib/menuService.js'
+import { Reveal, SafeImage } from './ui.jsx'
 
-const SOURCE_LABELS = {
-  listing: 'Reported in public listings',
-  menu_photo: 'Seen on the menu board in a guest photo',
-}
+const highlight = photoById('breakfast-plate-and-drinks')
 
-const formatNpr = (value) => `NPR ${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
-
+/** Home-page introduction to the menu. The full list lives on /menu. */
 export default function MenuSection() {
   const [state, setState] = useState({ status: 'loading', categories: [] })
-  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     const controller = new AbortController()
-    api('/menu', { signal: controller.signal })
-      .then((data) => setState({ status: 'ready', categories: data.categories }))
+    loadMenu({ signal: controller.signal })
+      .then((data) => setState({ status: 'ready', categories: data.categories.filter((c) => c.items.length > 0) }))
       .catch((err) => err.name !== 'AbortError' && setState({ status: 'error', categories: [] }))
     return () => controller.abort()
   }, [])
 
-  const categories = state.categories.filter((c) => c.items.length > 0)
-  const shown = categories.filter((c) => filter === 'all' || c.slug === filter)
-  const items = shown.flatMap((c) => c.items.map((item) => ({ ...item, tagline: c.tagline || c.name })))
-  const hasPrices = items.some((i) => i.price_npr !== null)
-
   return (
     <section id="menu" className="section">
-      <Reveal className="mb-[25px] md:mb-[37px] md:flex md:items-end md:justify-between md:gap-10">
-        <div>
-          <p className="eyebrow">Pick your happy</p>
+      <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto] lg:gap-[8%]">
+        <Reveal>
+          <p className="kicker">Pick your happy</p>
           <h2 className="h2">
             Something fresh.
             <br />
             Something <em>you.</em>
           </h2>
-        </div>
-        <p className="mt-5 text-sm leading-[1.8] md:mt-0">
-          From your first sip to the last spoonful.
-          <br />
-          Find a favourite, or try a little something new.
-        </p>
-      </Reveal>
-
-      {state.status === 'loading' && (
-        <p role="status" className="py-10 text-sm">
-          Loading the menu…
-        </p>
-      )}
+          <p className="mt-6 max-w-[440px] leading-[1.85]">
+            From your first sip to the last spoonful. Cold-pressed juices, slow breakfasts and bowls built with fruit that
+            came in this morning.
+          </p>
+          <Link className="pill pill-dark mt-7" to="/menu">
+            See the full menu <span aria-hidden="true">→</span>
+          </Link>
+        </Reveal>
+        <Reveal className="relative mx-auto h-[340px] w-[260px] lg:mx-0 lg:h-[400px] lg:w-[310px]">
+          <SafeImage
+            src={photoSrc(highlight, 720)}
+            width={highlight.width}
+            height={highlight.height}
+            loading="lazy"
+            alt={highlight.alt}
+            className="h-full w-full rounded-[160px_160px_5px_5px] object-cover shadow-[0_30px_60px_-30px_rgba(22,61,45,0.6)]"
+          />
+          <span className="absolute -left-5 bottom-6 -rotate-3 bg-cream px-[18px] py-[9px] text-xs shadow-md">{highlight.caption}</span>
+        </Reveal>
+      </div>
 
       {state.status === 'error' && (
-        <p role="alert" className="rounded-lg border border-line bg-sage p-6 text-sm">
+        <p role="alert" className="mt-10 rounded-lg border border-line bg-sage p-6 text-sm">
           We couldn’t load the menu just now. Please refresh, or call us on{' '}
           <a className="font-semibold underline" href={BUSINESS.phoneHref}>
             {BUSINESS.phoneDisplay}
-          </a>{' '}
-          and we’ll tell you what’s fresh today.
+          </a>
+          .
         </p>
       )}
 
       {state.status === 'ready' && (
-        <>
-          <div role="group" aria-label="Menu categories" className="mb-[30px] flex flex-wrap gap-[7px] md:gap-[10px]">
-            <button type="button" className="chip" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
-              All
-            </button>
-            {categories.map((c) => (
-              <button key={c.id} type="button" className="chip" aria-pressed={filter === c.slug} onClick={() => setFilter(c.slug)}>
-                {c.name}
-              </button>
-            ))}
-          </div>
-
-          <ul aria-live="polite" className="grid grid-cols-1 border-l border-t border-line sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
-              <li
-                key={`${filter}-${item.id}`}
-                className={`appear border-b border-r border-line px-[18px] py-5 md:px-7 md:py-[27px] ${item.is_available ? '' : 'opacity-60'}`}
-              >
-                <span className="text-[10px] uppercase tracking-[2px] opacity-70">{item.tagline}</span>
-                <div className="my-3 flex items-baseline justify-between gap-4">
-                  <h3 className="text-[23px] tracking-[-0.6px] md:text-[26px]">{item.name}</h3>
-                  {item.price_npr !== null && (
-                    <span className="shrink-0 whitespace-nowrap text-sm font-semibold">{formatNpr(item.price_npr)}</span>
-                  )}
-                </div>
-                {item.description && <p className="max-w-[340px] text-[13px] leading-[1.7] md:text-sm">{item.description}</p>}
-                {!item.is_available && <p className="mt-2 text-xs font-semibold uppercase tracking-[1.5px]">Not available right now</p>}
-                {SOURCE_LABELS[item.source] && (
-                  <p className="mt-3 text-[11px] opacity-65">
-                    <span aria-hidden="true">{item.source === 'listing' ? '● ' : '○ '}</span>
-                    {SOURCE_LABELS[item.source]}
-                  </p>
-                )}
+        <Reveal as="ul" aria-label="Menu sections" className="mt-12 grid grid-cols-2 border-l border-t border-line md:mt-16 md:grid-cols-3 xl:grid-cols-4">
+          {state.categories.map((category, index) => {
+            const from = Math.min(...category.items.filter((i) => i.price_npr !== null).map((i) => Number(i.price_npr)))
+            return (
+              <li key={category.id} className="border-b border-r border-line">
+                <Link
+                  to={`/menu?category=${category.slug}`}
+                  className="group flex h-full flex-col justify-between gap-6 p-5 transition-colors duration-300 hover:bg-forest hover:text-cream md:p-7"
+                >
+                  <span className="text-[11px] tracking-[3px] opacity-60">{String(index + 1).padStart(2, '0')}</span>
+                  <span>
+                    <span className="block font-display text-[22px] leading-tight tracking-[-0.5px] md:text-[28px]">{category.name}</span>
+                    <span className="mt-2 flex items-center justify-between gap-3 text-xs opacity-75">
+                      <span>
+                        {category.items.length} {category.items.length === 1 ? 'choice' : 'choices'}
+                        {Number.isFinite(from) ? ` · from ${formatPrice(from)}` : ''}
+                      </span>
+                      <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1 group-hover:text-citrus">
+                        →
+                      </span>
+                    </span>
+                  </span>
+                </Link>
               </li>
-            ))}
-          </ul>
-          {items.length === 0 && <p className="py-8 text-sm">Nothing listed here yet.</p>}
-
-          <p className="mt-5 max-w-3xl text-xs opacity-75">
-            This menu is gathered from public listings and a guest photo of the menu board, so it may not match today’s
-            menu exactly.{' '}
-            {hasPrices
-              ? 'Prices are shown only where the shop has confirmed them, in Nepalese rupees (NPR).'
-              : 'Prices are not shown until the shop confirms them.'}{' '}
-            Ask us about today’s availability, prices and vegan options.
-          </p>
-        </>
+            )
+          })}
+        </Reveal>
       )}
     </section>
   )

@@ -1,16 +1,32 @@
 # Wendy Juice Shop — website, table requests and owner dashboard
 
 A website for Wendy Juice Shop (Lakeside, Pokhara) with a table-booking **request** flow and a protected owner
-dashboard.
+dashboard. It is a booking site only: there is no food ordering, cart, delivery or payment.
 
 - **Frontend:** React, Vite, Tailwind CSS (`frontend/`)
 - **Backend:** Python, FastAPI, SQLAlchemy, Alembic (`backend/`)
 - **Database:** PostgreSQL
 - **Local development:** Docker Compose
 
-> **Before real use**, read [docs/OWNER_CONFIRMATION.md](docs/OWNER_CONFIRMATION.md). The booking rules that ship
-> with the project are provisional demo values, and the photographs still need the owner's approval
-> ([docs/ASSET_MANIFEST.md](docs/ASSET_MANIFEST.md)).
+> **Before real use**, read [docs/OWNER_CONFIRMATION.md](docs/OWNER_CONFIRMATION.md): the booking rules are
+> provisional demo values and a few menu entries need the owner's answer.
+
+## Current stage
+
+The frontend has been updated with the shop's own photographs, its full printed menu, WhatsApp and three
+sign-in pages. The backend is unchanged from the first version.
+
+| Area | Status |
+|---|---|
+| Table requests (guest, no account) | Working, saved in PostgreSQL |
+| Owner sign-in and dashboard (`/owner/login`, `/owner`) | Working |
+| Public menu | Its own page at `/menu` (search and category filters), from the printed menu in `frontend/src/data/menuFromPdf.js`. The home page shows the menu sections and links there. |
+| Owner menu editor | Works, but edits the **database** menu, which the website does not show yet |
+| Customer sign-in (`/customer/login`) | Page only; sign-in is switched off |
+| Staff sign-in (`/employee/login`) | Page only; sign-in is switched off |
+| Customer, staff and team screens | Development-only design previews with fictional data |
+
+What the backend stage must add is in [docs/API_HANDOFF.md](docs/API_HANDOFF.md).
 
 ## Run it locally
 
@@ -49,7 +65,20 @@ docker compose exec backend python -m app.cli set-password owner@example.com
 
 1. Open **Booking settings**, set the real booking windows and group sizes, tick "I have reviewed these
    settings" and save.
-2. Open **Menu** and correct items, descriptions, availability and prices.
+2. The **Menu** tab edits the database menu. The public site currently shows the printed menu instead, so
+   those edits are saved but not yet visible to guests (the tab says so).
+
+### Frontend switches
+
+Set these in `.env` (Docker Compose) or `frontend/.env.local` (running `npm run dev` yourself):
+
+| Variable | Values | Meaning |
+|---|---|---|
+| `VITE_MENU_SOURCE` | `pdf` (default), `api` | Where the public menu comes from. No fallback between them. |
+| `VITE_ENABLE_PREVIEW` | `false` (default), `true` | Shows the customer (`/customer`), staff (`/employee`) and owner "Team (preview)" design previews. Works only in the Vite dev server; production builds never include them. |
+
+The previews use fictional data, keep everything in memory, call no API and store nothing in the browser. They
+are not sign-ins and never show real bookings.
 
 ## Provisional demo settings
 
@@ -129,19 +158,24 @@ backend/
   tests/
 frontend/
   src/site/             Public page sections
-  src/owner/            Owner dashboard
-  src/lib/              API client, time helpers, business details, gallery list
-  public/images/        Optimised photographs (see docs/ASSET_MANIFEST.md)
+  src/owner/            Owner dashboard (real session)
+  src/auth/             Sign-in page layout; disabled customer/staff sign-in
+  src/preview/          Development-only previews and their fictional data
+  src/data/             The printed menu as structured data
+  src/lib/              API client, menu service, business details, gallery list, time helpers
+  public/images/        Display copies; public/images/original/ holds the supplied originals
+  public/menu/          The printed menu PDF
 docs/
-  ASSET_MANIFEST.md     Every image and text source, with permission status
+  ASSET_MANIFEST.md     Every photo, the menu and the logo, with where they came from
   OWNER_CONFIRMATION.md What the owner still needs to confirm
+  API_HANDOFF.md        Endpoints in use and the backend work still to do
 ```
 
 ## API summary
 
 | Method and path | Who | Purpose |
 |---|---|---|
-| `GET /api/menu` | Public | Menu categories and items |
+| `GET /api/menu` | Public | Database menu (used by the site only when `VITE_MENU_SOURCE=api`) |
 | `GET /api/booking/config` | Public | Booking rules for the form (no guest data) |
 | `POST /api/bookings` | Public | Send a table request; returns reference, `pending`, message |
 | `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout` | Owner | Session |

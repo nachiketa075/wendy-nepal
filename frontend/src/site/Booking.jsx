@@ -220,13 +220,20 @@ export default function Booking() {
             </li>
           ))}
         </ol>
-        <p className="mt-7 max-w-[440px] text-sm">
-          Coming right now, or in a bigger group?{' '}
-          <a className="font-semibold underline" href={BUSINESS.phoneHref}>
-            Call {BUSINESS.phoneDisplay}
-          </a>
-          .
-        </p>
+        <div className="mt-7 max-w-[440px] text-sm">
+          <p>Coming right now, in a bigger group, or need a hand with this form?</p>
+          <p className="mt-3 flex flex-wrap gap-3">
+            <a className="pill !py-2" href={BUSINESS.phoneHref}>
+              Call {BUSINESS.phoneDisplay}
+            </a>
+            <a className="pill !py-2" href={BUSINESS.whatsappUrl} target="_blank" rel="noopener noreferrer">
+              WhatsApp us<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </p>
+          <p className="mt-3 text-xs opacity-75">
+            WhatsApp opens a chat with the shop. A message there is not a table request and does not confirm a booking.
+          </p>
+        </div>
       </Reveal>
 
       <Reveal className="rounded-[5px] bg-cream p-6 md:p-10">

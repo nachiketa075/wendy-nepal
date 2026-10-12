@@ -1,15 +1,20 @@
+import { photoById, photoSrc, photoSrcSet } from '../lib/gallery.js'
 import { Reveal, SafeImage } from './ui.jsx'
+
+const storyPhoto = photoById('interior-stone-seating-area')
 
 export default function Story() {
   return (
     <section id="story" className="section grid items-center gap-9 bg-sage md:grid-cols-2 md:gap-[8%]">
       <Reveal className="relative h-[390px] md:h-[430px] lg:h-[520px]">
         <SafeImage
-          src="/images/wendy-interior-chalkboard-menu.webp"
-          width="1024"
-          height="768"
+          src={photoSrc(storyPhoto)}
+          srcSet={photoSrcSet(storyPhoto)}
+          sizes="(min-width: 768px) 44vw, 88vw"
+          width={storyPhoto.width}
+          height={storyPhoto.height}
           loading="lazy"
-          alt="Inside Wendy Juice Shop, with a chalkboard menu above the juice counter"
+          alt={storyPhoto.alt}
           className="h-full w-full rounded-[5px_5px_150px_5px] object-cover"
         />
         <span className="absolute bottom-5 left-5 -rotate-3 bg-cream px-[18px] py-[9px] text-xs">A little corner of Pokhara.</span>

@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { LoginCard } from '../auth/AuthLayout.jsx'
 import { api, setCsrfToken } from '../lib/api.js'
+import { PREVIEW_ENABLED } from '../lib/preview.js'
 import { Brand } from '../site/ui.jsx'
 import BookingsPanel from './BookingsPanel.jsx'
 import MenuPanel from './MenuPanel.jsx'
@@ -11,12 +14,19 @@ const TABS = [
   ['menu', 'Menu'],
 ]
 
+// Design preview only (fictional data, nothing saved). The tab and its code are
+// left out entirely unless the development preview switch is on.
+const TeamPanel = PREVIEW_ENABLED ? lazy(() => import('../preview/TeamPanel.jsx')) : null
+if (PREVIEW_ENABLED) TABS.push(['team', 'Team (preview)'])
+
 export default function OwnerApp() {
   const [session, setSession] = useState(undefined) // undefined = checking, null = signed out
   const [tab, setTab] = useState('bookings')
+  // This component serves /owner and /owner/login with the one real session.
+  const onLoginPage = useLocation().pathname.replace(/\/+$/, '') === '/owner/login'
 
   useEffect(() => {
-    document.title = 'Owner dashboard · Wendy Juice Shop'
+    document.title = 'Owner · Wendy Juice Shop'
     api('/auth/me')
       .then((data) => {
         setCsrfToken(data.csrf_token)
@@ -48,7 +58,7 @@ export default function OwnerApp() {
   return (
     <div className="shell min-h-screen">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-line px-[6%] py-5">
-        <Brand tagline="OWNER DASHBOARD" href="/" />
+        <Brand tagline={session ? 'OWNER DASHBOARD' : 'OWNER SIGN-IN'} href="/" />
         {session && (
           <div className="flex items-center gap-4 text-sm">
             <span className="hidden sm:inline">{session.email}</span>
@@ -61,7 +71,9 @@ export default function OwnerApp() {
 
       <main className="px-[6%] py-10">
         {session === undefined && <p role="status">Checking your session…</p>}
-        {session === null && (
+        {session === null && !onLoginPage && <Navigate to="/owner/login" replace />}
+        {session && onLoginPage && <Navigate to="/owner" replace />}
+        {session === null && onLoginPage && (
           <Login
             onSignedIn={(data) => {
               setCsrfToken(data.csrf_token)
@@ -88,10 +100,20 @@ export default function OwnerApp() {
               {tab === 'bookings' && <BookingsPanel onAuthError={onAuthError} />}
               {tab === 'settings' && <SettingsPanel onAuthError={onAuthError} />}
               {tab === 'menu' && <MenuPanel onAuthError={onAuthError} />}
+              {tab === 'team' && TeamPanel && (
+                <Suspense fallback={<p role="status">Loading…</p>}>
+                  <TeamPanel />
+                </Suspense>
+              )}
             </div>
           </>
         )}
       </main>
+      <footer className="border-t border-line px-[6%] py-5 text-xs">
+        <Link className="underline" to="/">
+          ← Back to the website
+        </Link>
+      </footer>
     </div>
   )
 }
@@ -118,35 +140,33 @@ function Login({ onSignedIn }) {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-md rounded-[5px] bg-sage p-8" aria-labelledby="login-title">
-      <p className="eyebrow">Staff only</p>
-      <h1 id="login-title" className="mb-6 text-[40px]">
-        Sign in
-      </h1>
-      {error && (
-        <p role="alert" className="mb-5 rounded-lg border border-berry/40 bg-berry/5 p-3 text-sm font-medium text-berry">
-          {error}
-        </p>
-      )}
-      <label className="field-label" htmlFor="login-email">
-        Email
-      </label>
-      <input id="login-email" type="email" className="field mb-5" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
-      <label className="field-label" htmlFor="login-password">
-        Password
-      </label>
-      <input
-        id="login-password"
-        type="password"
-        className="field mb-6"
-        autoComplete="current-password"
-        required
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button type="submit" className="pill pill-dark w-full" disabled={busy}>
-        {busy ? 'Signing in…' : 'Sign in'}
-      </button>
-    </form>
+    <LoginCard eyebrow="For the owner" title="Sign in" current="/owner/login">
+      <form onSubmit={submit} aria-label="Owner sign-in">
+        {error && (
+          <p role="alert" className="mb-5 rounded-lg border border-berry/40 bg-berry/5 p-3 text-sm font-medium text-berry">
+            {error}
+          </p>
+        )}
+        <label className="field-label" htmlFor="login-email">
+          Email
+        </label>
+        <input id="login-email" type="email" className="field mb-5" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <label className="field-label" htmlFor="login-password">
+          Password
+        </label>
+        <input
+          id="login-password"
+          type="password"
+          className="field mb-6"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button type="submit" className="pill pill-dark w-full" disabled={busy}>
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
+    </LoginCard>
   )
 }
