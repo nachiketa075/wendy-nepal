@@ -59,7 +59,7 @@
   .kicker::before { content: ''; @apply h-px w-10 bg-current opacity-50; }
   /* Dotted line between a dish and its price, as on a printed menu. */
   .leader { @apply mx-3 mb-[6px] min-w-[20px] flex-1 border-b border-dotted border-forest/35; }
-  .photo-frame { @apply overflow-hidden rounded-[5px] bg-[#c8cbb3] shadow-[0_18px_40px_-22px_rgba(22,61,45,0.55)] transition-shadow duration-500; }
+  .photo-frame { @apply overflow-hidden rounded-[20px] bg-[#c8cbb3] shadow-[0_18px_40px_-22px_rgba(22,61,45,0.55)] transition-shadow duration-500; }
   .photo-frame:hover { @apply shadow-[0_26px_50px_-22px_rgba(22,61,45,0.7)]; }
 }
 

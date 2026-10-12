@@ -143,7 +143,7 @@ function Lightbox({ photos, index, onIndex, onClose }) {
           width={photo.width}
           height={photo.height}
           style={{ maxWidth: `min(100%, ${photo.width}px)` }}
-          className="max-h-full w-auto rounded-[5px] object-contain"
+          className="max-h-full w-auto rounded-[20px] object-contain"
         />
       </div>
 

@@ -42,7 +42,7 @@ export default function EmployeePreview() {
       banner={<PreviewBanner />}
       right={<span className="hidden sm:inline">{PREVIEW_EMPLOYEE.email}</span>}
     >
-      <div className="mb-8 rounded-[5px] bg-sage p-5">
+      <div className="mb-8 rounded-[20px] bg-sage p-5">
         <label className="field-label" htmlFor="permission-set">
           Preview as an employee with…
         </label>
@@ -67,7 +67,7 @@ export default function EmployeePreview() {
       <h1 className="mb-6 text-[40px]">Bookings</h1>
 
       {!can('view_bookings') ? (
-        <div role="alert" className="max-w-xl rounded-[5px] border border-line bg-white/60 p-8">
+        <div role="alert" className="max-w-xl rounded-[20px] border border-line bg-white/60 p-8">
           <h2 className="mb-3 text-[28px] tracking-[-0.6px]">You don’t have access to bookings.</h2>
           <p className="text-sm">Your account isn’t allowed to view table requests. Ask the owner to give you the “View bookings” permission.</p>
         </div>
@@ -99,14 +99,14 @@ export default function EmployeePreview() {
             {notice}
           </p>
 
-          {shown.length === 0 && <p className="rounded-[5px] bg-sage p-8 text-sm">No bookings match these filters.</p>}
+          {shown.length === 0 && <p className="rounded-[20px] bg-sage p-8 text-sm">No bookings match these filters.</p>}
 
           <ul className="grid gap-4 xl:grid-cols-2">
             {shown.map((b) => {
               const open = openId === b.id
               const actions = actionsFor(b)
               return (
-                <li key={b.id} className="rounded-[5px] border border-line bg-white/60 p-5">
+                <li key={b.id} className="rounded-[20px] border border-line bg-white/60 p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2 className="text-[24px] tracking-[-0.6px]">{b.full_name}</h2>

@@ -13,7 +13,7 @@ const PLATFORMS = [
 export default function Feedback() {
   return (
     <section id="feedback" className="section !pt-0" aria-labelledby="feedback-title">
-      <Reveal className="grid gap-8 rounded-[5px] bg-citrus p-[27px] md:grid-cols-[1.1fr_1fr] md:gap-[8%] md:p-[50px]">
+      <Reveal className="grid gap-8 rounded-[20px] bg-citrus p-[27px] md:grid-cols-[1.1fr_1fr] md:gap-[8%] md:p-[50px]">
         <div>
           <span aria-hidden="true" className="text-[40px] leading-none">
             ✳

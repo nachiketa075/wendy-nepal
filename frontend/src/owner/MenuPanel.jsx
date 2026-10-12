@@ -57,7 +57,7 @@ export default function MenuPanel({ onAuthError }) {
         Menu
       </h1>
       {MENU_SOURCE === 'pdf' ? (
-        <div role="note" className="mb-6 max-w-3xl rounded-[5px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
+        <div role="note" className="mb-6 max-w-3xl rounded-[20px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
           <strong>Changes made here do not show on the website at the moment.</strong> The public menu is currently taken
           from your printed menu (
           <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
@@ -83,7 +83,7 @@ export default function MenuPanel({ onAuthError }) {
         <CategoryBlock key={category.id} category={category} categories={categories} run={run} />
       ))}
 
-      <form onSubmit={addCategory} className="mt-10 flex flex-wrap items-end gap-3 rounded-[5px] bg-sage p-5">
+      <form onSubmit={addCategory} className="mt-10 flex flex-wrap items-end gap-3 rounded-[20px] bg-sage p-5">
         <label className="flex-1">
           <span className="field-label">New category</span>
           <input className="field" maxLength={80} value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Seasonal specials" />
@@ -183,7 +183,7 @@ function ItemForm({ item, categories, run }) {
 
   const uid = isNew ? `new-${item.category_id}` : item.id
   return (
-    <li className={`rounded-[5px] border p-4 ${isNew ? 'border-dashed border-forest/50' : 'border-line bg-white/60'}`}>
+    <li className={`rounded-[20px] border p-4 ${isNew ? 'border-dashed border-forest/50' : 'border-line bg-white/60'}`}>
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-[1fr_130px]" aria-label={isNew ? 'Add a menu item' : `Edit ${item.name}`}>
         <label>
           <span className="field-label">{isNew ? 'New item name' : 'Name'}</span>

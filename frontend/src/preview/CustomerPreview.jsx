@@ -34,7 +34,7 @@ export default function CustomerPreview() {
     const open = openId === booking.id
     const canAsk = upcoming.includes(booking) && !booking.cancellationRequested
     return (
-      <li key={booking.id} className="rounded-[5px] border border-line bg-white/60 p-5">
+      <li key={booking.id} className="rounded-[20px] border border-line bg-white/60 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-[24px] tracking-[-0.6px]">
@@ -108,7 +108,7 @@ export default function CustomerPreview() {
       </div>
 
       {view === 'signed-out' && (
-        <div className="max-w-md rounded-[5px] bg-sage p-8">
+        <div className="max-w-md rounded-[20px] bg-sage p-8">
           <h1 className="mb-3 text-[36px]">You’re signed out.</h1>
           <p className="mb-5 text-sm">Sign in to see your bookings.</p>
           <Link className="pill pill-dark" to="/customer/login">
@@ -127,7 +127,7 @@ export default function CustomerPreview() {
         </div>
       )}
       {view === 'empty' && (
-        <div className="max-w-xl rounded-[5px] bg-sage p-8">
+        <div className="max-w-xl rounded-[20px] bg-sage p-8">
           <h1 className="mb-3 text-[36px]">No bookings yet.</h1>
           <p className="mb-5 text-sm">When you ask for a table, it will show up here with its status.</p>
           <a className="pill pill-dark" href="/#book">

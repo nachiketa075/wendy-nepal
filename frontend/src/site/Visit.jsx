@@ -42,9 +42,9 @@ export function Visit() {
             height={exterior.height}
             loading="lazy"
             alt={exterior.alt}
-            className="aspect-[4/3] w-full rounded-[5px_5px_5px_120px] object-cover"
+            className="aspect-[4/3] w-full rounded-[28px_28px_28px_120px] object-cover"
           />
-          <figcaption className="absolute bottom-5 right-5 rotate-2 bg-cream px-[18px] py-[9px] text-xs text-forest">{exterior.caption}</figcaption>
+          <figcaption className="absolute bottom-5 right-5 rotate-2 rounded-[10px] bg-cream px-[18px] py-[9px] text-xs text-forest">{exterior.caption}</figcaption>
         </figure>
       </Reveal>
       <Reveal className="pt-2">

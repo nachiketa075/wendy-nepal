@@ -102,7 +102,7 @@ export default function BookingsPanel({ onAuthError }) {
         {loading ? 'Loading…' : data ? `${data.total} request${data.total === 1 ? '' : 's'} shown, by requested date.` : ''}
       </p>
 
-      {data && data.items.length === 0 && !loading && <p className="rounded-[5px] bg-sage p-8 text-sm">No requests match these filters.</p>}
+      {data && data.items.length === 0 && !loading && <p className="rounded-[20px] bg-sage p-8 text-sm">No requests match these filters.</p>}
 
       <ul className="grid gap-4 xl:grid-cols-2">
         {data?.items.map((booking) => (
@@ -142,7 +142,7 @@ function BookingCard({ booking, onChanged, onAuthError }) {
 
   const notesId = `notes-${booking.id}`
   return (
-    <li className="rounded-[5px] border border-line bg-white/60 p-5 md:p-6">
+    <li className="rounded-[20px] border border-line bg-white/60 p-5 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-[26px] tracking-[-0.6px]">{booking.full_name}</h2>

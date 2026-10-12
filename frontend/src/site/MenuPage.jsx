@@ -155,7 +155,7 @@ export default function MenuPage() {
               </p>
 
               {shown.length === 0 && (
-                <div className="mx-auto max-w-xl rounded-[5px] bg-sage p-10 text-center">
+                <div className="mx-auto max-w-xl rounded-[20px] bg-sage p-10 text-center">
                   <h2 className="text-[30px] tracking-[-0.6px]">Nothing on the menu matches that.</h2>
                   <p className="my-4 text-sm">
                     {query ? `No dishes match “${search.trim()}”` : 'No dishes'}

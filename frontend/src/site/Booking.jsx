@@ -236,7 +236,7 @@ export default function Booking() {
         </div>
       </Reveal>
 
-      <Reveal className="rounded-[5px] bg-cream p-6 md:p-10">
+      <Reveal className="rounded-[20px] bg-cream p-6 md:p-10">
         {configState === 'loading' && (
           <p role="status" className="py-10 text-sm">
             Loading the request form…

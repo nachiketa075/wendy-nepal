@@ -42,7 +42,7 @@ export function Hero() {
           </span>
         </div>
       </div>
-      <div className="relative mx-[6%] mb-[25px] h-[420px] overflow-hidden rounded-[160px_160px_6px_6px] bg-[#c8cbb3] md:my-[23px] md:ml-0 md:mr-6 md:h-auto md:rounded-[180px_180px_8px_8px]">
+      <div className="relative mx-[6%] mb-[25px] h-[420px] overflow-hidden rounded-[160px_160px_28px_28px] bg-[#c8cbb3] md:my-[23px] md:ml-0 md:mr-6 md:h-auto md:rounded-[180px_180px_32px_32px]">
         <SafeImage
           src={photoSrc(heroPhoto)}
           srcSet={photoSrcSet(heroPhoto)}
@@ -53,7 +53,7 @@ export function Hero() {
           alt={heroPhoto.alt}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute bottom-[25px] left-[25px] -rotate-[4deg] rounded-[5px] bg-cream px-[25px] py-[15px] font-display text-2xl">
+        <div className="absolute bottom-[25px] left-[25px] -rotate-[4deg] rounded-[12px] bg-cream px-[25px] py-[15px] font-display text-2xl">
           A taste of Lakeside
           <span className="block font-sans text-[11px] uppercase leading-[1.5] tracking-[2px]">Pokhara, Nepal</span>
         </div>

@@ -15,9 +15,9 @@ export default function Story() {
           height={storyPhoto.height}
           loading="lazy"
           alt={storyPhoto.alt}
-          className="h-full w-full rounded-[5px_5px_150px_5px] object-cover"
+          className="h-full w-full rounded-[28px_28px_150px_28px] object-cover"
         />
-        <span className="absolute bottom-5 left-5 -rotate-3 bg-cream px-[18px] py-[9px] text-xs">A little corner of Pokhara.</span>
+        <span className="absolute bottom-5 left-5 -rotate-3 rounded-[10px] bg-cream px-[18px] py-[9px] text-xs">A little corner of Pokhara.</span>
       </Reveal>
       <Reveal>
         <p className="eyebrow">Rooted in Lakeside</p>

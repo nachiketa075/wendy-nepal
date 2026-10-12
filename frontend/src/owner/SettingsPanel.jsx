@@ -71,7 +71,7 @@ export default function SettingsPanel({ onAuthError }) {
       </p>
 
       {!settings.owner_confirmed && (
-        <div role="note" className="mb-8 rounded-[5px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
+        <div role="note" className="mb-8 rounded-[20px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
           <strong>These are provisional demo values.</strong> They were not taken from the shop’s real hours. Review each
           one, tick the confirmation box at the bottom and save. On the live site, online requests stay closed until you
           have done this.

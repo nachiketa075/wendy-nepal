@@ -44,9 +44,9 @@ export default function MenuSection() {
             height={highlight.height}
             loading="lazy"
             alt={highlight.alt}
-            className="h-full w-full rounded-[160px_160px_5px_5px] object-cover shadow-[0_30px_60px_-30px_rgba(22,61,45,0.6)]"
+            className="h-full w-full rounded-[160px_160px_28px_28px] object-cover shadow-[0_30px_60px_-30px_rgba(22,61,45,0.6)]"
           />
-          <span className="absolute -left-5 bottom-6 -rotate-3 bg-cream px-[18px] py-[9px] text-xs shadow-md">{highlight.caption}</span>
+          <span className="absolute -left-5 bottom-6 -rotate-3 rounded-[10px] bg-cream px-[18px] py-[9px] text-xs shadow-md">{highlight.caption}</span>
         </Reveal>
       </div>
 

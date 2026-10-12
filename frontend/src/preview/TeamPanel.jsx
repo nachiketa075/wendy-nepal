@@ -33,7 +33,7 @@ export default function TeamPanel() {
       <h1 id="team-title" className="mb-2 text-[40px]">
         Team &amp; permissions <PreviewTag />
       </h1>
-      <div role="note" className="mb-8 max-w-3xl rounded-[5px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
+      <div role="note" className="mb-8 max-w-3xl rounded-[20px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
         <strong>This screen is a design preview with fictional employees.</strong> Staff accounts do not exist yet. Nothing
         you change here is saved, no one can sign in with it, and it does not limit what anyone can do. It becomes real once
         the server supports staff accounts and checks these permissions itself.
@@ -45,7 +45,7 @@ export default function TeamPanel() {
 
       <ul className="grid gap-4 xl:grid-cols-2">
         {employees.map((employee) => (
-          <li key={employee.id} className={`rounded-[5px] border border-line bg-white/60 p-5 ${employee.active ? '' : 'opacity-70'}`}>
+          <li key={employee.id} className={`rounded-[20px] border border-line bg-white/60 p-5 ${employee.active ? '' : 'opacity-70'}`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-[24px] tracking-[-0.6px]">{employee.name}</h2>
@@ -80,7 +80,7 @@ export default function TeamPanel() {
         ))}
       </ul>
 
-      <form onSubmit={add} className="mt-8 grid max-w-3xl gap-3 rounded-[5px] bg-sage p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <form onSubmit={add} className="mt-8 grid max-w-3xl gap-3 rounded-[20px] bg-sage p-5 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <label>
           <span className="field-label">New employee name</span>
           <input className="field" maxLength={120} value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} />

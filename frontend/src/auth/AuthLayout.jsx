@@ -35,7 +35,7 @@ export function AreaShell({ tagline, title, right, banner, children }) {
 export function LoginCard({ eyebrow, title, current, children }) {
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-[5px] bg-sage p-7 md:p-8">
+      <div className="rounded-[20px] bg-sage p-7 md:p-8">
         <SafeImage src={LOGO_URL} width="482" height="482" alt="Wendy Juice Shop logo" className="mx-auto mb-5 h-[96px] w-[96px]" />
         <p className="eyebrow !mb-3 text-center">{eyebrow}</p>
         <h1 className="mb-6 text-center text-[40px]">{title}</h1>
