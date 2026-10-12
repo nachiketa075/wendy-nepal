@@ -1,0 +1,796 @@
+{
+  "source_document": "CM.pdf",
+  "public_path": "/menu/wendy-juice-shop-menu.pdf",
+  "supplied_on": "2026-10-10",
+  "owner_review": [
+    {
+      "slug": "brunch-vegan-porridge",
+      "note": "Description reads as toast/avocado/cherry tomatoes, not porridge."
+    },
+    {
+      "slug": "rice-bowl-vegan-buddha-bowl",
+      "note": "Rice Bowl section repeats the Buddha Bowl entries."
+    },
+    {
+      "slug": "rice-bowl-chicken-buddha-bowl",
+      "note": "Rice Bowl section repeats the Buddha Bowl entries."
+    },
+    {
+      "slug": "brunch-cheese-frittata",
+      "note": "Description mentions sausages."
+    }
+  ],
+  "categories": [
+    {
+      "slug": "coffee",
+      "name": "Coffee",
+      "page": 1,
+      "sort_order": 10,
+      "notes": [],
+      "items": [
+        {
+          "slug": "coffee-espresso",
+          "name": "Espresso",
+          "description": null,
+          "price_npr": 150,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "coffee-doppio",
+          "name": "Doppio",
+          "description": null,
+          "price_npr": 170,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "coffee-americano",
+          "name": "Americano",
+          "description": null,
+          "price_npr": 170,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "coffee-lungo",
+          "name": "Lungo",
+          "description": null,
+          "price_npr": 190,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "coffee-cappuccino",
+          "name": "Cappuccino",
+          "description": null,
+          "price_npr": 220,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "coffee-cafe-latte",
+          "name": "Cafe Latte",
+          "description": null,
+          "price_npr": 220,
+          "addons": [],
+          "sort_order": 60
+        },
+        {
+          "slug": "coffee-cafe-mocha",
+          "name": "Cafe Mocha",
+          "description": null,
+          "price_npr": 240,
+          "addons": [],
+          "sort_order": 70
+        },
+        {
+          "slug": "coffee-iced-americano",
+          "name": "Iced Americano",
+          "description": null,
+          "price_npr": 230,
+          "addons": [],
+          "sort_order": 80
+        },
+        {
+          "slug": "coffee-iced-cappuccino",
+          "name": "Iced Cappuccino",
+          "description": null,
+          "price_npr": 280,
+          "addons": [],
+          "sort_order": 90
+        },
+        {
+          "slug": "coffee-iced-latte",
+          "name": "Iced latte",
+          "description": null,
+          "price_npr": 280,
+          "addons": [],
+          "sort_order": 100
+        },
+        {
+          "slug": "coffee-iced-mocha",
+          "name": "Iced Mocha",
+          "description": null,
+          "price_npr": 280,
+          "addons": [],
+          "sort_order": 110
+        },
+        {
+          "slug": "coffee-flat-white",
+          "name": "Flat White",
+          "description": null,
+          "price_npr": 200,
+          "addons": [],
+          "sort_order": 120
+        }
+      ]
+    },
+    {
+      "slug": "tea",
+      "name": "Tea",
+      "page": 1,
+      "sort_order": 20,
+      "notes": [],
+      "items": [
+        {
+          "slug": "tea-black-tea",
+          "name": "Black Tea",
+          "description": null,
+          "price_npr": 50,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "tea-lemon-tea",
+          "name": "Lemon Tea",
+          "description": null,
+          "price_npr": 70,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "tea-milk-tea",
+          "name": "Milk Tea",
+          "description": null,
+          "price_npr": 80,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "tea-masala-tea",
+          "name": "Masala Tea",
+          "description": null,
+          "price_npr": 90,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "tea-hot-chocolate",
+          "name": "Hot chocolate",
+          "description": null,
+          "price_npr": 190,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "tea-ginger-lemon-honey",
+          "name": "Ginger Lemon Honey",
+          "description": null,
+          "price_npr": 200,
+          "addons": [],
+          "sort_order": 60
+        },
+        {
+          "slug": "tea-hot-lemon-honey",
+          "name": "Hot Lemon Honey",
+          "description": null,
+          "price_npr": 150,
+          "addons": [],
+          "sort_order": 70
+        },
+        {
+          "slug": "tea-green-tea",
+          "name": "Green Tea",
+          "description": null,
+          "price_npr": 70,
+          "addons": [],
+          "sort_order": 80
+        }
+      ]
+    },
+    {
+      "slug": "fresh-juice",
+      "name": "Fresh Juice",
+      "page": 1,
+      "sort_order": 30,
+      "notes": [],
+      "items": [
+        {
+          "slug": "fresh-juice-banana-lassi",
+          "name": "Banana lassi",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "fresh-juice-watermelon",
+          "name": "Watermelon",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "fresh-juice-avocado",
+          "name": "Avocado",
+          "description": null,
+          "price_npr": 350,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "fresh-juice-pineapple",
+          "name": "Pineapple",
+          "description": null,
+          "price_npr": 350,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "fresh-juice-papaya",
+          "name": "Papaya",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "fresh-juice-orange",
+          "name": "Orange",
+          "description": null,
+          "price_npr": 380,
+          "addons": [],
+          "sort_order": 60
+        },
+        {
+          "slug": "fresh-juice-apple",
+          "name": "Apple",
+          "description": null,
+          "price_npr": 380,
+          "addons": [],
+          "sort_order": 70
+        },
+        {
+          "slug": "fresh-juice-mango",
+          "name": "Mango",
+          "description": null,
+          "price_npr": 300,
+          "addons": [],
+          "sort_order": 80
+        },
+        {
+          "slug": "fresh-juice-abc",
+          "name": "ABC",
+          "description": "(Apple, Beetroot, Carrot)",
+          "price_npr": 350,
+          "addons": [],
+          "sort_order": 90
+        },
+        {
+          "slug": "fresh-juice-cucumber",
+          "name": "Cucumber",
+          "description": null,
+          "price_npr": 230,
+          "addons": [],
+          "sort_order": 100
+        },
+        {
+          "slug": "fresh-juice-mint-lemonade",
+          "name": "Mint lemonade",
+          "description": null,
+          "price_npr": 200,
+          "addons": [],
+          "sort_order": 110
+        },
+        {
+          "slug": "fresh-juice-fresh-lemonade",
+          "name": "Fresh lemonade",
+          "description": null,
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 120
+        },
+        {
+          "slug": "fresh-juice-strawberry-lemonade",
+          "name": "Strawberry lemonade",
+          "description": null,
+          "price_npr": 350,
+          "addons": [],
+          "sort_order": 130
+        },
+        {
+          "slug": "fresh-juice-mixed-juice",
+          "name": "Mixed Juice",
+          "description": "(choose any 3 fruits from above)",
+          "price_npr": 350,
+          "addons": [],
+          "sort_order": 140
+        }
+      ]
+    },
+    {
+      "slug": "lassi-milkshake",
+      "name": "Lassi / Milkshake",
+      "page": 1,
+      "sort_order": 40,
+      "notes": [],
+      "items": [
+        {
+          "slug": "lassi-milkshake-banana",
+          "name": "Banana",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "lassi-milkshake-papaya",
+          "name": "Papaya",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "lassi-milkshake-apple",
+          "name": "Apple",
+          "description": null,
+          "price_npr": 380,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "lassi-milkshake-mango",
+          "name": "Mango",
+          "description": null,
+          "price_npr": 300,
+          "addons": [],
+          "sort_order": 40
+        }
+      ]
+    },
+    {
+      "slug": "blended-beverages",
+      "name": "Blended Beverages",
+      "page": 1,
+      "sort_order": 50,
+      "notes": [],
+      "items": [
+        {
+          "slug": "blended-beverages-blended-watermelon-mint",
+          "name": "Blended Watermelon Mint",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "blended-beverages-golden-immunity-boost",
+          "name": "Golden Immunity Boost",
+          "description": null,
+          "price_npr": 180,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "blended-beverages-cucumber-lemon-detox",
+          "name": "Cucumber Lemon Detox",
+          "description": null,
+          "price_npr": 380,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "blended-beverages-green-zing",
+          "name": "Green Zing",
+          "description": null,
+          "price_npr": 300,
+          "addons": [],
+          "sort_order": 40
+        }
+      ]
+    },
+    {
+      "slug": "fruit-bowl",
+      "name": "Fruit Bowl",
+      "page": 2,
+      "sort_order": 60,
+      "notes": [],
+      "items": [
+        {
+          "slug": "fruit-bowl-fruit-salad",
+          "name": "Fruit Salad",
+          "description": "Seasonal Fresh Fruits",
+          "price_npr": 400,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "fruit-bowl-fruit-with-yogurt",
+          "name": "Fruit with Yogurt",
+          "description": "Seasonal Fruits, Plain Yogurt",
+          "price_npr": 450,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "fruit-bowl-muesli-fruit-yogurt",
+          "name": "Muesli Fruit Yogurt",
+          "description": "Muesli, Seasonal Fruits, Yogurt",
+          "price_npr": 480,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "fruit-bowl-granola-fruit-yogurt",
+          "name": "Granola Fruit Yogurt",
+          "description": "Granola, Seasonal Fruits, Yogurt",
+          "price_npr": 480,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "fruit-bowl-porridge-with-fruit",
+          "name": "Porridge with Fruit",
+          "description": "Oat Porridge, Seasonal Fruits",
+          "price_npr": 400,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "fruit-bowl-oats-with-fruit",
+          "name": "Oats with Fruit",
+          "description": "Rolled Oats, Seasonal Fruits",
+          "price_npr": 400,
+          "addons": [],
+          "sort_order": 60
+        }
+      ]
+    },
+    {
+      "slug": "salad",
+      "name": "Salad",
+      "page": 2,
+      "sort_order": 70,
+      "notes": [],
+      "items": [
+        {
+          "slug": "salad-avocado-salad",
+          "name": "Avocado Salad",
+          "description": "(Avocado, cheese, lettuce, rucola, kale, carrot, tomato, olive, cabbage, dressed with honey mustard sauce)",
+          "price_npr": 400,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "salad-green-harvest-salad",
+          "name": "Green Harvest Salad",
+          "description": "(feta cheese, mixed lettuce, rucola, kale, carrot, apple, pomegranate, grapes, dressed with honey mustard sauce, garnished with microgreens and basils)",
+          "price_npr": 400,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "salad-chicken-caesar-salad",
+          "name": "Chicken Caesar Salad",
+          "description": "(chicken, mozzarella cheese, mixed lettuce, olive)",
+          "price_npr": 400,
+          "addons": [],
+          "sort_order": 30
+        }
+      ]
+    },
+    {
+      "slug": "smoothie",
+      "name": "Smoothie",
+      "page": 2,
+      "sort_order": 80,
+      "notes": [],
+      "items": [
+        {
+          "slug": "smoothie-sunrise-smoothie",
+          "name": "Sunrise Smoothie",
+          "description": "(Banana, Strawberry, Beetroot, Orange juice)",
+          "price_npr": 200,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "smoothie-matcha-muse",
+          "name": "Matcha Muse",
+          "description": "(Match Powder, Avocado, Dates, Spinach, Almond Milk)",
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "smoothie-super-green-boost",
+          "name": "Super green Boost",
+          "description": "(Spinach, Spirulina, Hempseed, Banana, Apple juice)",
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "smoothie-banananut-smoothie",
+          "name": "Banananut Smoothie",
+          "description": "(Banana, Peanut Butter, Coco Powder, Oat milk)",
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "smoothie-mango-majesty",
+          "name": "Mango Majesty",
+          "description": "(Mango, Curd, Milk, Sugar)",
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "smoothie-banana-bliss",
+          "name": "Banana Bliss",
+          "description": "(Banana, Curd, Milk,Almond)",
+          "price_npr": 300,
+          "addons": [],
+          "sort_order": 60
+        }
+      ]
+    },
+    {
+      "slug": "smoothie-bowl",
+      "name": "Smoothie Bowl",
+      "page": 2,
+      "sort_order": 90,
+      "notes": [],
+      "items": [
+        {
+          "slug": "smoothie-bowl-papaya-smoothie-bowl",
+          "name": "Papaya Smoothie Bowl",
+          "description": "Papaya, Banana, Granola, Coconut",
+          "price_npr": 480,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "smoothie-bowl-mango-smoothie-bowl",
+          "name": "Mango Smoothie Bowl",
+          "description": "Mango, Banana, Granola, Honey",
+          "price_npr": 500,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "smoothie-bowl-avocado-smoothie-bowl",
+          "name": "Avocado Smoothie Bowl",
+          "description": "Avocado, Banana, Granola, Honey",
+          "price_npr": 600,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "smoothie-bowl-strawberry-smoothie-bowl",
+          "name": "Strawberry Smoothie Bowl",
+          "description": "Strawberry, Banana, Granola",
+          "price_npr": 550,
+          "addons": [],
+          "sort_order": 40
+        }
+      ]
+    },
+    {
+      "slug": "brunch",
+      "name": "Brunch",
+      "page": 3,
+      "sort_order": 100,
+      "notes": [],
+      "items": [
+        {
+          "slug": "brunch-simple-breakfast",
+          "name": "Simple Breakfast",
+          "description": "(Eggs, Toast, Butter, Jam, sautéed potatoes, onions, capsicum, mushrooms, spinach, fruit salad)",
+          "price_npr": 450,
+          "addons": [
+            {
+              "label": "add on sausages",
+              "price": 80,
+              "unit": "per piece"
+            }
+          ],
+          "sort_order": 10
+        },
+        {
+          "slug": "brunch-vegan-breakfast",
+          "name": "Vegan Breakfast",
+          "description": "(toast, peanut butter, fried tofu, sautéed mushroom, spinach, tomatoes, fruit salad, lettuce, kale, rocket garnished with microgreens and basils, fruit salad)",
+          "price_npr": 500,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "brunch-smashed-avocado-on-toast",
+          "name": "Smashed Avocado on Toast",
+          "description": "(Toast, smashed avocado, sautéed mushrooms, tomatoes, spinach, fruit salad, green leafy salad garnished with microgreens and basils)",
+          "price_npr": 500,
+          "addons": [
+            {
+              "label": "add on 2 eggs",
+              "price": 80
+            }
+          ],
+          "sort_order": 30
+        },
+        {
+          "slug": "brunch-french-toast",
+          "name": "French Toast",
+          "description": "(Toast coated in cinnamon and egg, drizzled with honey, fresh fruits toppings, garnished with almond, raisin and coconut powder)",
+          "price_npr": 450,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "brunch-oatmeal-pancake",
+          "name": "Oatmeal Pancake",
+          "description": "(creamy banana oats made with milk, crowned with fresh fruits and a touch of golden honey)",
+          "price_npr": 450,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "brunch-vegan-porridge",
+          "name": "Vegan Porridge",
+          "description": "Sourdough Toast, Avocado, Cherry Tomatoes",
+          "price_npr": 450,
+          "addons": [],
+          "sort_order": 60
+        },
+        {
+          "slug": "brunch-cheese-frittata",
+          "name": "Cheese Frittata",
+          "description": "(fluffy egg frittata loaded with melted cheese, lightly seasoned herbs and fresh vegetables, sausages)",
+          "price_npr": 500,
+          "addons": [
+            {
+              "label": "add on 2 eggs",
+              "price": 80
+            }
+          ],
+          "sort_order": 70
+        }
+      ]
+    },
+    {
+      "slug": "sandwiches",
+      "name": "Sandwiches",
+      "page": 3,
+      "sort_order": 110,
+      "notes": [
+        {
+          "label": "Extra Cheese Topping",
+          "price": 70,
+          "prefix": "+"
+        }
+      ],
+      "items": [
+        {
+          "slug": "sandwiches-veg-sandwich",
+          "name": "Veg Sandwich",
+          "description": null,
+          "price_npr": 200,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "sandwiches-cheese-sandwich",
+          "name": "Cheese Sandwich",
+          "description": null,
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 20
+        },
+        {
+          "slug": "sandwiches-tuna-sandwich",
+          "name": "Tuna Sandwich",
+          "description": null,
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 30
+        },
+        {
+          "slug": "sandwiches-chicken-sandwich",
+          "name": "Chicken Sandwich",
+          "description": null,
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 40
+        },
+        {
+          "slug": "sandwiches-egg-sandwich",
+          "name": "Egg Sandwich",
+          "description": null,
+          "price_npr": 250,
+          "addons": [],
+          "sort_order": 50
+        },
+        {
+          "slug": "sandwiches-bacon-sandwich",
+          "name": "Bacon Sandwich",
+          "description": null,
+          "price_npr": 300,
+          "addons": [],
+          "sort_order": 60
+        },
+        {
+          "slug": "sandwiches-ham-sandwich",
+          "name": "Ham Sandwich",
+          "description": null,
+          "price_npr": 300,
+          "addons": [],
+          "sort_order": 70
+        }
+      ]
+    },
+    {
+      "slug": "buddha-bowl",
+      "name": "Buddha Bowl",
+      "page": 3,
+      "sort_order": 120,
+      "notes": [],
+      "items": [
+        {
+          "slug": "buddha-bowl-vegan-buddha-bowl",
+          "name": "Vegan Buddha Bowl",
+          "description": "(Seasonal Veggies, Grains, Hummus, Tahini Dressing)",
+          "price_npr": 600,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "buddha-bowl-chicken-buddha-bowl",
+          "name": "Chicken Buddha Bowl",
+          "description": "(Grilled Chicken, Grains, Veggies, Tahini Dressing)",
+          "price_npr": 680,
+          "addons": [],
+          "sort_order": 20
+        }
+      ]
+    },
+    {
+      "slug": "rice-bowl",
+      "name": "Rice Bowl",
+      "page": 3,
+      "sort_order": 130,
+      "notes": [],
+      "items": [
+        {
+          "slug": "rice-bowl-vegan-buddha-bowl",
+          "name": "Vegan Buddha Bowl",
+          "description": "(Seasonal Veggies, Grains, Hummus, Tahini Dressing)",
+          "price_npr": 600,
+          "addons": [],
+          "sort_order": 10
+        },
+        {
+          "slug": "rice-bowl-chicken-buddha-bowl",
+          "name": "Chicken Buddha Bowl",
+          "description": "(Grilled Chicken, Grains, Veggies, Tahini Dressing)",
+          "price_npr": 680,
+          "addons": [],
+          "sort_order": 20
+        }
+      ]
+    }
+  ]
+}

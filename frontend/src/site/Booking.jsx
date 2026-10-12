@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../lib/api.js'
+import { Link } from 'react-router-dom'
 import { BUSINESS } from '../lib/business.js'
-import { addDays, formatDate, formatTime, slotsFor } from '../lib/time.js'
+import { useSession } from '../lib/session.jsx'
+import { addDays, formatDate, formatTime, isClosedDate, slotsFor } from '../lib/time.js'
 import { Reveal } from './ui.jsx'
 
 const COUNTRY_CODES = [
@@ -73,7 +75,8 @@ function validate(form, config, slots) {
   else if (form.requested_date < config.today) errors.requested_date = 'That date has already passed.'
   else if (form.requested_date > addDays(config.today, config.max_advance_days)) {
     errors.requested_date = `Requests can be made up to ${config.max_advance_days} days ahead.`
-  } else if (slots.length === 0) errors.requested_date = 'No request times are left for that day. Please pick another date.'
+  } else if (isClosedDate(config, form.requested_date)) errors.requested_date = 'We are not taking table requests on that date.'
+  else if (slots.length === 0) errors.requested_date = 'No request times are left for that day. Please pick another date.'
   else if (!form.requested_time) errors.requested_time = 'Choose a time.'
   else if (!slots.includes(form.requested_time)) errors.requested_time = 'Please choose one of the listed times.'
 
@@ -93,6 +96,27 @@ export default function Booking() {
   const [status, setStatus] = useState('idle') // idle | submitting | success | error
   const [failure, setFailure] = useState('')
   const [receipt, setReceipt] = useState(null)
+
+  // A signed-in customer's request is linked to their account by the server
+  // (from the session). Everyone else sends a guest request, as before.
+  const { account, handleAuthError } = useSession()
+  const customer = account?.role === 'customer' ? account : null
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (!customer || prefilled.current) return
+    prefilled.current = true
+    const known = COUNTRY_CODES.map(([code]) => code).sort((a, b) => b.length - a.length).find((code) => customer.phone?.startsWith(code))
+    setForm((f) => ({
+      ...f,
+      full_name: f.full_name || customer.full_name,
+      email: f.email || customer.email,
+      ...(customer.phone && !f.phone_number
+        ? known
+          ? { country_code: known, phone_number: customer.phone.slice(known.length) }
+          : { country_code: 'other', custom_code: '', phone_number: customer.phone.replace(/^\+/, '') }
+        : {}),
+    }))
+  }, [customer])
 
   const formRef = useRef(null)
   const successRef = useRef(null)
@@ -144,7 +168,7 @@ export default function Booking() {
     setStatus('submitting')
     setFailure('')
     try {
-      const data = await api('/bookings', {
+      const data = await api(customer ? '/customer/bookings' : '/bookings', {
         method: 'POST',
         body: {
           full_name: form.full_name.trim(),
@@ -158,12 +182,17 @@ export default function Booking() {
         },
       })
       // Success is only ever shown from a stored booking returned by the server.
-      setReceipt({ ...data, summary: { ...form } })
+      setReceipt({ ...data, summary: { ...form }, linked: Boolean(customer) })
       setStatus('success')
       setForm(EMPTY)
       idempotencyKey.current = newKey()
       requestAnimationFrame(() => successRef.current?.focus())
     } catch (err) {
+      if (handleAuthError(err)) {
+        setStatus('error')
+        setFailure('Your request was not sent because you were signed out. Please send it again as a guest, or sign in first.')
+        return
+      }
       setStatus('error')
       const fieldErrors = Object.fromEntries(Object.entries(err.fields || {}).filter(([k]) => k in EMPTY || k === 'phone'))
       if (Object.keys(fieldErrors).length) {
@@ -299,16 +328,23 @@ export default function Booking() {
               </a>
               .
             </p>
-            <button
-              type="button"
-              className="pill"
-              onClick={() => {
-                setStatus('idle')
-                setReceipt(null)
-              }}
-            >
-              Make another request
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              {receipt.linked && (
+                <Link className="pill pill-dark" to="/customer">
+                  See my bookings
+                </Link>
+              )}
+              <button
+                type="button"
+                className="pill"
+                onClick={() => {
+                  setStatus('idle')
+                  setReceipt(null)
+                }}
+              >
+                Make another request
+              </button>
+            </div>
           </div>
         )}
 
@@ -318,6 +354,29 @@ export default function Booking() {
               Request a table
             </h3>
             <p className="mb-6 text-sm opacity-75">Times are Pokhara time (Asia/Kathmandu). Fields marked * are needed.</p>
+            <p className="mb-6 rounded-lg bg-sage px-4 py-3 text-sm">
+              {customer ? (
+                <>
+                  Signed in as <strong>{customer.email}</strong>. This request will appear under{' '}
+                  <Link className="underline" to="/customer">
+                    My bookings
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>
+                  No account needed.{' '}
+                  <Link className="underline" to="/customer/login">
+                    Sign in
+                  </Link>{' '}
+                  or{' '}
+                  <Link className="underline" to="/customer/register">
+                    create an account
+                  </Link>{' '}
+                  if you’d like to follow your requests online.
+                </>
+              )}
+            </p>
 
             {status === 'error' && failure && (
               <p role="alert" className="mb-6 rounded-lg border border-berry/40 bg-berry/5 p-4 text-sm font-medium text-berry">

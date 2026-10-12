@@ -1,47 +1,58 @@
-"""Small in-memory sliding-window rate limiter.
+"""Rate limiting backed by PostgreSQL.
 
-State lives in the API process, so it suits a single-worker deployment. When
-running several workers or instances, add a limit at the reverse proxy too.
+Counters live in the `rate_limit_events` table, so a limit holds across every
+API worker and instance that shares the database. Keys (which contain an IP
+address or an email) are stored only as SHA-256 digests.
 """
 
+import hashlib
 import math
-import threading
-import time
-from collections import defaultdict, deque
 
 from fastapi import Request
+from sqlalchemy import text
 
 from .config import get_settings
+from .database import engine
 from .errors import ApiError
 
 
 class RateLimiter:
-    def __init__(self) -> None:
-        self._hits: dict[str, deque[float]] = defaultdict(deque)
-        self._lock = threading.Lock()
-
     def hit(self, key: str, limit: int, window_seconds: int) -> None:
-        now = time.monotonic()
-        with self._lock:
-            hits = self._hits[key]
-            while hits and hits[0] <= now - window_seconds:
-                hits.popleft()
-            if len(hits) >= limit:
-                retry_after = max(1, math.ceil(hits[0] + window_seconds - now))
-                raise ApiError(
-                    429,
-                    "rate_limited",
-                    "Too many attempts. Please wait a little and try again.",
-                    headers={"Retry-After": str(retry_after)},
-                )
-            hits.append(now)
-            if len(self._hits) > 10_000:  # keep memory bounded
-                for stale in [k for k, v in self._hits.items() if not v]:
-                    del self._hits[stale]
+        digest = hashlib.sha256(key.encode()).hexdigest()
+        retry_after = None
+        with engine.begin() as conn:
+            # Serialise concurrent hits on the same key so the count is exact.
+            conn.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": digest})
+            conn.execute(
+                text("DELETE FROM rate_limit_events WHERE key_hash = :k AND created_at <= now() - make_interval(secs => :w)"),
+                {"k": digest, "w": window_seconds},
+            )
+            count, oldest_age = conn.execute(
+                text("SELECT count(*), COALESCE(EXTRACT(EPOCH FROM now() - min(created_at)), 0) FROM rate_limit_events WHERE key_hash = :k"),
+                {"k": digest},
+            ).one()
+            if count >= limit:
+                retry_after = max(1, math.ceil(window_seconds - float(oldest_age)))
+            else:
+                conn.execute(text("INSERT INTO rate_limit_events (key_hash) VALUES (:k)"), {"k": digest})
+        if retry_after is not None:
+            raise ApiError(
+                429,
+                "rate_limited",
+                "Too many attempts. Please wait a little and try again.",
+                headers={"Retry-After": str(retry_after)},
+            )
 
     def reset(self) -> None:
-        with self._lock:
-            self._hits.clear()
+        with engine.begin() as conn:
+            conn.execute(text("TRUNCATE rate_limit_events"))
+
+    def purge_expired(self, older_than_seconds: int = 2 * 24 * 60 * 60) -> None:
+        with engine.begin() as conn:
+            conn.execute(
+                text("DELETE FROM rate_limit_events WHERE created_at <= now() - make_interval(secs => :w)"),
+                {"w": older_than_seconds},
+            )
 
 
 limiter = RateLimiter()

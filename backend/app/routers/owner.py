@@ -1,235 +1,133 @@
-"""Owner-only API. Every route here requires an authenticated owner session
-(and a CSRF token for state-changing requests) via the router dependency."""
+"""Owner-only API: employees, their permissions and sessions, and the activity log.
+
+Employees can never reach these routes, so they cannot create accounts, grant
+permissions or change their own privileges."""
 
 import datetime as dt
-import re
-from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from .. import booking_service
+from .. import activity
+from ..config import get_settings
 from ..database import get_db
 from ..errors import ApiError
-from ..models import Booking, BookingWindow, MenuCategory, MenuItem
-from ..schemas import (
-    BookingList,
-    BookingNotes,
-    BookingOut,
-    BookingStatusChange,
-    MenuCategoryCreate,
-    MenuCategoryOut,
-    MenuCategoryUpdate,
-    MenuItemCreate,
-    MenuItemOut,
-    MenuItemUpdate,
-    MenuOut,
-    SettingsIn,
-    SettingsOut,
-)
-from ..security import require_owner
+from ..models import Account, AccountSession, ActivityLog
+from ..permissions import PERMISSIONS
+from ..schemas import ActivityList, EmployeeCreate, EmployeeCreated, EmployeeOut, EmployeeUpdate
+from ..security import require_owner, revoke_sessions
+from .auth import create_reset_token, reset_url
 
 router = APIRouter(prefix="/api/owner", tags=["owner"], dependencies=[Depends(require_owner)])
 
 
-@router.get("/bookings", response_model=BookingList)
-def list_bookings(
-    response: Response,
-    status: Literal["pending", "confirmed", "declined", "cancelled"] | None = None,
-    date_from: dt.date | None = None,
-    date_to: dt.date | None = None,
-    limit: int = Query(100, ge=1, le=200),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
-):
-    response.headers["Cache-Control"] = "no-store"
-    conditions = []
-    if date_from:
-        conditions.append(Booking.requested_date >= date_from)
-    if date_to:
-        conditions.append(Booking.requested_date <= date_to)
-
-    counts = dict.fromkeys(("pending", "confirmed", "declined", "cancelled"), 0)
-    counts.update(db.execute(select(Booking.status, func.count()).where(*conditions).group_by(Booking.status)).all())
-
-    if status:
-        conditions.append(Booking.status == status)
-    total = db.scalar(select(func.count()).select_from(Booking).where(*conditions))
-    items = db.scalars(
-        select(Booking)
-        .where(*conditions)
-        .order_by(Booking.requested_at, Booking.id)
-        .limit(limit)
-        .offset(offset)
-    ).all()
-    return {"items": items, "total": total, "counts": counts}
-
-
-def _get_booking(db: Session, booking_id: int) -> Booking:
-    booking = db.get(Booking, booking_id)
-    if booking is None:
-        raise ApiError(404, "not_found", "That booking request does not exist.")
-    return booking
-
-
-@router.get("/bookings/{booking_id}", response_model=BookingOut)
-def get_booking(booking_id: int, response: Response, db: Session = Depends(get_db)):
-    response.headers["Cache-Control"] = "no-store"
-    return _get_booking(db, booking_id)
-
-
-@router.post("/bookings/{booking_id}/status", response_model=BookingOut)
-def set_booking_status(booking_id: int, data: BookingStatusChange, db: Session = Depends(get_db)):
-    return booking_service.change_status(db, _get_booking(db, booking_id), data.status)
-
-
-@router.patch("/bookings/{booking_id}", response_model=BookingOut)
-def update_booking_notes(booking_id: int, data: BookingNotes, db: Session = Depends(get_db)):
-    booking = _get_booking(db, booking_id)
-    booking.internal_notes = data.internal_notes
-    db.commit()
-    return booking
-
-
-# ---------- Booking settings ----------
-
-
-def _settings_out(db: Session) -> SettingsOut:
-    settings = booking_service.get_booking_settings(db)
-    windows = db.scalars(select(BookingWindow).order_by(BookingWindow.weekday, BookingWindow.start_time)).all()
-    return SettingsOut(
-        booking_enabled=settings.booking_enabled,
-        owner_confirmed=settings.owner_confirmed,
-        min_party_size=settings.min_party_size,
-        max_party_size=settings.max_party_size,
-        min_lead_minutes=settings.min_lead_minutes,
-        max_advance_days=settings.max_advance_days,
-        slot_interval_minutes=settings.slot_interval_minutes,
-        windows=windows,
+def _employee_out(db: Session, account: Account) -> EmployeeOut:
+    sessions = db.scalar(
+        select(func.count()).select_from(AccountSession)
+        .where(AccountSession.account_id == account.id, AccountSession.expires_at > dt.datetime.now(dt.UTC))
     )
+    return EmployeeOut(id=account.id, email=account.email, full_name=account.full_name, is_active=account.is_active,
+                       permissions=sorted(account.permissions or []), has_password=account.password_hash is not None,
+                       active_sessions=sessions, created_at=account.created_at)
 
 
-@router.get("/settings", response_model=SettingsOut)
-def get_settings_route(db: Session = Depends(get_db)):
-    return _settings_out(db)
+def _get_employee(db: Session, employee_id: int) -> Account:
+    account = db.scalar(select(Account).where(Account.id == employee_id, Account.role == "employee"))
+    if account is None:
+        raise ApiError(404, "not_found", "That employee does not exist.")
+    return account
 
 
-@router.put("/settings", response_model=SettingsOut)
-def update_settings(data: SettingsIn, db: Session = Depends(get_db)):
-    settings = booking_service.get_booking_settings(db)
-    for field in (
-        "booking_enabled",
-        "owner_confirmed",
-        "min_party_size",
-        "max_party_size",
-        "min_lead_minutes",
-        "max_advance_days",
-        "slot_interval_minutes",
-    ):
-        setattr(settings, field, getattr(data, field))
-    for window in db.scalars(select(BookingWindow)).all():
-        db.delete(window)
-    db.add_all(
-        BookingWindow(weekday=w.weekday, start_time=w.start_time, end_time=w.end_time) for w in data.windows
-    )
+def _setup(db: Session, account: Account) -> tuple[str, dt.datetime]:
+    token, expires_at = create_reset_token(db, account, "setup", dt.timedelta(hours=get_settings().employee_setup_ttl_hours))
+    return reset_url(token), expires_at
+
+
+@router.get("/permissions")
+def list_permissions() -> list[dict]:
+    return [{"key": key, "label": label} for key, label in PERMISSIONS.items()]
+
+
+@router.get("/employees", response_model=list[EmployeeOut])
+def list_employees(response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    rows = db.scalars(select(Account).where(Account.role == "employee").order_by(Account.full_name, Account.id)).all()
+    return [_employee_out(db, a) for a in rows]
+
+
+@router.post("/employees", response_model=EmployeeCreated, status_code=201)
+def create_employee(data: EmployeeCreate, response: Response, owner: Account = Depends(require_owner),
+                    db: Session = Depends(get_db)):
+    """Create an employee with no password and the permissions given (none by default).
+
+    The reply carries a one-time setup link for the owner to pass on; no email is sent.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    email = str(data.email).lower()
+    if db.scalar(select(Account.id).where(Account.email == email)) is not None:
+        raise ApiError(409, "email_taken", "Please check the highlighted details.",
+                       {"email": "An account with this email already exists."})
+    account = Account(email=email, password_hash=None, role="employee", full_name=data.full_name,
+                      permissions=sorted(set(data.permissions)))
+    db.add(account)
+    db.flush()
+    url, expires_at = _setup(db, account)
+    activity.record(db, owner, "employee.created", "account", account.id, email=email, permissions=account.permissions)
     db.commit()
-    return _settings_out(db)
+    return EmployeeCreated(employee=_employee_out(db, account), setup_url=url, setup_expires_at=expires_at)
 
 
-# ---------- Menu ----------
-
-
-def _slugify(db: Session, name: str) -> str:
-    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:50] or "category"
-    slug, n = base, 2
-    while db.scalar(select(MenuCategory.id).where(MenuCategory.slug == slug)) is not None:
-        slug, n = f"{base}-{n}", n + 1
-    return slug
-
-
-def _get_category(db: Session, category_id: int) -> MenuCategory:
-    category = db.get(MenuCategory, category_id)
-    if category is None:
-        raise ApiError(422, "validation_error", "Please choose an existing category.", {"category_id": "Unknown category."})
-    return category
-
-
-def _get_item(db: Session, item_id: int) -> MenuItem:
-    item = db.get(MenuItem, item_id)
-    if item is None:
-        raise ApiError(404, "not_found", "That menu item does not exist.")
-    return item
-
-
-@router.get("/menu", response_model=MenuOut)
-def owner_menu(db: Session = Depends(get_db)):
-    categories = db.scalars(
-        select(MenuCategory)
-        .options(selectinload(MenuCategory.items))
-        .order_by(MenuCategory.sort_order, MenuCategory.id)
-    ).all()
-    return {"categories": categories}
-
-
-@router.post("/menu/categories", response_model=MenuCategoryOut, status_code=201)
-def create_category(data: MenuCategoryCreate, db: Session = Depends(get_db)):
-    category = MenuCategory(slug=_slugify(db, data.name), **data.model_dump())
-    db.add(category)
+@router.post("/employees/{employee_id}/setup-link", response_model=EmployeeCreated)
+def new_setup_link(employee_id: int, response: Response, owner: Account = Depends(require_owner), db: Session = Depends(get_db)):
+    """Issue a fresh one-time link (cancels earlier ones). Also signs the employee out."""
+    response.headers["Cache-Control"] = "no-store"
+    account = _get_employee(db, employee_id)
+    if not account.is_active:
+        raise ApiError(409, "inactive", "Reactivate this employee before sending a new link.")
+    url, expires_at = _setup(db, account)
+    revoke_sessions(db, account.id)
+    activity.record(db, owner, "employee.setup_link_issued", "account", account.id)
     db.commit()
-    return category
+    return EmployeeCreated(employee=_employee_out(db, account), setup_url=url, setup_expires_at=expires_at)
 
 
-@router.patch("/menu/categories/{category_id}", response_model=MenuCategoryOut)
-def update_category(category_id: int, data: MenuCategoryUpdate, db: Session = Depends(get_db)):
-    category = db.get(MenuCategory, category_id)
-    if category is None:
-        raise ApiError(404, "not_found", "That category does not exist.")
+@router.patch("/employees/{employee_id}", response_model=EmployeeOut)
+def update_employee(employee_id: int, data: EmployeeUpdate, owner: Account = Depends(require_owner),
+                    db: Session = Depends(get_db)):
+    account = _get_employee(db, employee_id)
     changes = data.model_dump(exclude_unset=True)
-    if changes.get("name", "") is None or changes.get("sort_order", 0) is None:
-        raise ApiError(422, "validation_error", "Name and order cannot be empty.")
-    for field, value in changes.items():
-        setattr(category, field, value)
+    if any(value is None for value in changes.values()):
+        raise ApiError(422, "validation_error", "Fields cannot be empty.")
+    if "permissions" in changes:
+        before = sorted(account.permissions or [])
+        account.permissions = sorted(set(changes["permissions"]))
+        activity.record(db, owner, "employee.permissions_changed", "account", account.id, before=before, after=account.permissions)
+    if "full_name" in changes:
+        account.full_name = changes["full_name"]
+    if "is_active" in changes and changes["is_active"] != account.is_active:
+        account.is_active = changes["is_active"]
+        if not account.is_active:
+            revoke_sessions(db, account.id)
+        activity.record(db, owner, "employee.reactivated" if account.is_active else "employee.deactivated", "account", account.id)
     db.commit()
-    return category
+    return _employee_out(db, account)
 
 
-@router.delete("/menu/categories/{category_id}", status_code=204)
-def delete_category(category_id: int, db: Session = Depends(get_db)):
-    category = db.get(MenuCategory, category_id)
-    if category is None:
-        raise ApiError(404, "not_found", "That category does not exist.")
-    if db.scalar(select(func.count()).select_from(MenuItem).where(MenuItem.category_id == category_id)):
-        raise ApiError(409, "category_not_empty", "Move or delete the items in this category first.")
-    db.delete(category)
+@router.post("/employees/{employee_id}/revoke-sessions", response_model=EmployeeOut)
+def revoke_employee_sessions(employee_id: int, owner: Account = Depends(require_owner), db: Session = Depends(get_db)):
+    account = _get_employee(db, employee_id)
+    revoke_sessions(db, account.id)
+    activity.record(db, owner, "employee.sessions_revoked", "account", account.id)
     db.commit()
+    return _employee_out(db, account)
 
 
-@router.post("/menu/items", response_model=MenuItemOut, status_code=201)
-def create_item(data: MenuItemCreate, db: Session = Depends(get_db)):
-    _get_category(db, data.category_id)
-    item = MenuItem(source="owner", **data.model_dump())
-    db.add(item)
-    db.commit()
-    return item
-
-
-@router.patch("/menu/items/{item_id}", response_model=MenuItemOut)
-def update_item(item_id: int, data: MenuItemUpdate, db: Session = Depends(get_db)):
-    item = _get_item(db, item_id)
-    changes = data.model_dump(exclude_unset=True)
-    for required in ("category_id", "name", "is_available", "sort_order"):
-        if required in changes and changes[required] is None:
-            raise ApiError(422, "validation_error", "Please check the highlighted details.", {required: "Cannot be empty."})
-    if "category_id" in changes:
-        _get_category(db, changes["category_id"])
-    for field, value in changes.items():
-        setattr(item, field, value)
-    db.commit()
-    return item
-
-
-@router.delete("/menu/items/{item_id}", status_code=204)
-def delete_item(item_id: int, db: Session = Depends(get_db)):
-    db.delete(_get_item(db, item_id))
-    db.commit()
+@router.get("/activity", response_model=ActivityList)
+def activity_log(response: Response, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+                 actor_id: int | None = None, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    conditions = [ActivityLog.actor_id == actor_id] if actor_id else []
+    total = db.scalar(select(func.count()).select_from(ActivityLog).where(*conditions))
+    rows = db.scalars(select(ActivityLog).where(*conditions).order_by(ActivityLog.id.desc()).limit(limit).offset(offset)).all()
+    return ActivityList(items=rows, total=total)

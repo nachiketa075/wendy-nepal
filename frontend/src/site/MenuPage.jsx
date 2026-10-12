@@ -22,7 +22,7 @@ function matches(item, category, query) {
 
 /** The full menu, on its own page at /menu. */
 export default function MenuPage() {
-  const [state, setState] = useState({ status: 'loading', categories: [], source: null })
+  const [state, setState] = useState({ status: 'loading', categories: [] })
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const filter = params.get('category') || 'all'
@@ -34,7 +34,7 @@ export default function MenuPage() {
     const controller = new AbortController()
     loadMenu({ signal: controller.signal })
       .then((data) => setState({ status: 'ready', ...data }))
-      .catch((err) => err.name !== 'AbortError' && setState({ status: 'error', categories: [], source: null }))
+      .catch((err) => err.name !== 'AbortError' && setState({ status: 'error', categories: [] }))
     return () => controller.abort()
   }, [])
 
@@ -208,11 +208,9 @@ export default function MenuPage() {
 
               <p className="mx-auto mt-16 max-w-[1180px] border-t border-line pt-6 text-center text-xs opacity-75">
                 Prices are in Nepalese rupees. Ask us about today’s availability.{' '}
-                {state.source === 'pdf' && (
-                  <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
-                    Printed menu (PDF)<span className="sr-only"> (opens in a new tab)</span>
-                  </a>
-                )}
+                <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
+                  Printed menu (PDF)<span className="sr-only"> (opens in a new tab)</span>
+                </a>
               </p>
             </div>
 

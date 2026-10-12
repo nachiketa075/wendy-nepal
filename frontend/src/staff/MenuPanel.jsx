@@ -1,12 +1,25 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
-import { MENU_PDF_URL } from '../lib/business.js'
-import { MENU_SOURCE } from '../lib/menuService.js'
 
 const SOURCE_NOTE = {
-  listing: 'From a public listing — please check it is right.',
-  menu_photo: 'Read from a guest photo of the menu board — please check it is still on the menu.',
-  owner: 'Added by you.',
+  listing: 'Older item from a public listing.',
+  menu_photo: 'Older item read from a photo of the menu board.',
+  owner: 'Added in this dashboard.',
+  owner_pdf: 'From your printed menu.',
+}
+
+// Add-ons are edited one per line: "label | price | unit", e.g. "add on 2 eggs | 80".
+const addonsToText = (addons) => (addons || []).map((a) => [a.label, a.price, a.unit].filter((v) => v !== undefined && v !== null && v !== '').join(' | ')).join('\n')
+function textToAddons(text, keep = []) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label = '', price = '', unit = ''] = line.split('|').map((part) => part.trim())
+      const previous = keep.find((a) => a.label === label)
+      return { label, price, ...(unit ? { unit } : {}), ...(previous?.prefix ? { prefix: previous.prefix } : {}) }
+    })
 }
 
 export default function MenuPanel({ onAuthError }) {
@@ -16,7 +29,7 @@ export default function MenuPanel({ onAuthError }) {
 
   const load = useCallback(async () => {
     try {
-      setCategories((await api('/owner/menu')).categories)
+      setCategories((await api('/staff/menu')).categories)
     } catch (err) {
       if (!onAuthError(err)) setError(err.message)
     }
@@ -46,7 +59,7 @@ export default function MenuPanel({ onAuthError }) {
     event.preventDefault()
     if (!newCategory.trim()) return
     const sort_order = Math.max(0, ...(categories || []).map((c) => c.sort_order)) + 10
-    if (await run(() => api('/owner/menu/categories', { method: 'POST', body: { name: newCategory, sort_order } }))) setNewCategory('')
+    if (await run(() => api('/staff/menu/categories', { method: 'POST', body: { name: newCategory, sort_order } }))) setNewCategory('')
   }
 
   if (!categories) return <p role={error ? 'alert' : 'status'}>{error || 'Loading menu…'}</p>
@@ -56,23 +69,10 @@ export default function MenuPanel({ onAuthError }) {
       <h1 id="menu-title" className="mb-2 text-[40px]">
         Menu
       </h1>
-      {MENU_SOURCE === 'pdf' ? (
-        <div role="note" className="mb-6 max-w-3xl rounded-[20px] border border-amber bg-citrus/40 p-5 text-sm leading-[1.7]">
-          <strong>Changes made here do not show on the website at the moment.</strong> The public menu is currently taken
-          from your printed menu (
-          <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
-            PDF
-          </a>
-          ), while this editor changes the separate menu stored in the database. Your edits are saved, but guests will not
-          see them until the two are joined up in the next stage of work. To change the public menu before then, send us the
-          updated menu.
-        </div>
-      ) : (
-        <p className="mb-6 max-w-2xl text-sm opacity-80">
-          Changes appear on the website as soon as you save. A price is only shown to guests when you enter one here.
-          Leave it empty to show no price.
-        </p>
-      )}
+      <p className="mb-6 max-w-2xl text-sm opacity-80">
+        This is the menu guests see on the website: changes appear as soon as you save. Untick “Show on website” to hide an
+        item without deleting it. Prices are shown as “Rs.”; leave a price empty to show none.
+      </p>
       {error && (
         <p role="alert" className="sticky top-2 z-10 mb-5 rounded-lg border border-berry/40 bg-cream p-3 text-sm font-medium text-berry">
           {error}
@@ -99,7 +99,8 @@ export default function MenuPanel({ onAuthError }) {
 function CategoryBlock({ category, categories, run }) {
   const [name, setName] = useState(category.name)
   const [tagline, setTagline] = useState(category.tagline || '')
-  const dirty = name !== category.name || tagline !== (category.tagline || '')
+  const [notes, setNotes] = useState(addonsToText(category.notes))
+  const dirty = name !== category.name || tagline !== (category.tagline || '') || notes !== addonsToText(category.notes)
   const nextOrder = Math.max(0, ...category.items.map((i) => i.sort_order)) + 10
 
   return (
@@ -110,14 +111,14 @@ function CategoryBlock({ category, categories, run }) {
           <input className="field font-display !text-xl" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="min-w-[200px] flex-1">
-          <span className="field-label">Small label above items</span>
-          <input className="field" maxLength={80} value={tagline} onChange={(e) => setTagline(e.target.value)} />
+          <span className="field-label">Section extras (label | price)</span>
+          <input className="field" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Extra Cheese Topping | 70" />
         </label>
         <button
           type="button"
           className="pill !py-2"
           disabled={!dirty || !name.trim()}
-          onClick={() => run(() => api(`/owner/menu/categories/${category.id}`, { method: 'PATCH', body: { name, tagline } }))}
+          onClick={() => run(() => api(`/staff/menu/categories/${category.id}`, { method: 'PATCH', body: { name, tagline, notes: textToAddons(notes, category.notes) } }))}
         >
           Save
         </button>
@@ -126,7 +127,7 @@ function CategoryBlock({ category, categories, run }) {
           className="textlink mb-2"
           onClick={() =>
             window.confirm(`Delete the category “${category.name}”? It must be empty.`) &&
-            run(() => api(`/owner/menu/categories/${category.id}`, { method: 'DELETE' }))
+            run(() => api(`/staff/menu/categories/${category.id}`, { method: 'DELETE' }))
           }
         >
           Delete category
@@ -137,7 +138,7 @@ function CategoryBlock({ category, categories, run }) {
         {category.items.map((item) => (
           <ItemForm key={item.id} item={item} categories={categories} run={run} />
         ))}
-        <ItemForm key={`new-${category.items.length}`} item={{ category_id: category.id, name: '', description: '', is_available: true, price_npr: null, sort_order: nextOrder }} categories={categories} run={run} />
+        <ItemForm key={`new-${category.items.length}`} item={{ category_id: category.id, name: '', description: '', is_available: true, is_published: true, addons: [], price_npr: null, sort_order: nextOrder }} categories={categories} run={run} />
       </ul>
     </div>
   )
@@ -150,6 +151,8 @@ function ItemForm({ item, categories, run }) {
     description: item.description || '',
     category_id: String(item.category_id),
     is_available: item.is_available,
+    is_published: item.is_published,
+    addons: addonsToText(item.addons),
     price_npr: item.price_npr === null ? '' : String(Number(item.price_npr)),
   }
   const [form, setForm] = useState(initial)
@@ -170,12 +173,14 @@ function ItemForm({ item, categories, run }) {
       description: form.description,
       category_id: Number(form.category_id),
       is_available: form.is_available,
+      is_published: form.is_published,
+      addons: textToAddons(form.addons, item.addons),
       price_npr: form.price_npr === '' ? null : form.price_npr,
     }
     const ok = await run(() =>
       isNew
-        ? api('/owner/menu/items', { method: 'POST', body: { ...body, sort_order: item.sort_order } })
-        : api(`/owner/menu/items/${item.id}`, { method: 'PATCH', body }),
+        ? api('/staff/menu/items', { method: 'POST', body: { ...body, sort_order: item.sort_order } })
+        : api(`/staff/menu/items/${item.id}`, { method: 'PATCH', body }),
     )
     setBusy(false)
     setSaved(ok)
@@ -183,7 +188,7 @@ function ItemForm({ item, categories, run }) {
 
   const uid = isNew ? `new-${item.category_id}` : item.id
   return (
-    <li className={`rounded-[20px] border p-4 ${isNew ? 'border-dashed border-forest/50' : 'border-line bg-white/60'}`}>
+    <li className={`rounded-[20px] border p-4 ${isNew ? 'border-dashed border-forest/50' : 'border-line bg-white/60'} ${!isNew && !item.is_published ? 'opacity-70' : ''}`}>
       <form onSubmit={save} className="grid gap-3 sm:grid-cols-[1fr_130px]" aria-label={isNew ? 'Add a menu item' : `Edit ${item.name}`}>
         <label>
           <span className="field-label">{isNew ? 'New item name' : 'Name'}</span>
@@ -196,6 +201,12 @@ function ItemForm({ item, categories, run }) {
         <label className="sm:col-span-2">
           <span className="field-label">Description</span>
           <textarea className="field !py-2 text-sm" rows={2} maxLength={600} value={form.description} onChange={set('description')} />
+        </label>
+        <label className="sm:col-span-2">
+          <span className="field-label">
+            Add-ons <span className="normal-case tracking-normal opacity-70">(one per line: label | price | unit)</span>
+          </span>
+          <textarea className="field !py-2 text-sm" rows={form.addons ? 2 : 1} value={form.addons} onChange={set('addons')} placeholder="add on 2 eggs | 80" />
         </label>
         <label>
           <span className="field-label">Category</span>
@@ -211,6 +222,10 @@ function ItemForm({ item, categories, run }) {
           <input id={`avail-${uid}`} type="checkbox" className="h-5 w-5 accent-forest" checked={form.is_available} onChange={set('is_available')} />
           Available
         </label>
+        <label className="flex items-center gap-2 text-sm sm:col-span-2">
+          <input type="checkbox" className="h-5 w-5 accent-forest" checked={form.is_published} onChange={set('is_published')} />
+          Show on website
+        </label>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
           <button type="submit" className="pill !py-2" disabled={busy || !dirty || !form.name.trim()}>
             {busy ? 'Saving…' : isNew ? 'Add item' : 'Save'}
@@ -219,7 +234,7 @@ function ItemForm({ item, categories, run }) {
             <button
               type="button"
               className="textlink"
-              onClick={() => window.confirm(`Remove “${item.name}” from the menu?`) && run(() => api(`/owner/menu/items/${item.id}`, { method: 'DELETE' }))}
+              onClick={() => window.confirm(`Remove “${item.name}” from the menu?`) && run(() => api(`/staff/menu/items/${item.id}`, { method: 'DELETE' }))}
             >
               Remove
             </button>
@@ -227,7 +242,13 @@ function ItemForm({ item, categories, run }) {
           <span role="status" className="text-sm font-medium">
             {saved && !dirty ? 'Saved.' : ''}
           </span>
-          {!isNew && <span className="text-xs opacity-65">{SOURCE_NOTE[item.source]}</span>}
+          {!isNew && (
+            <span className="text-xs opacity-65">
+              {SOURCE_NOTE[item.source]}
+              {item.edited_since_import ? ' Edited by you since the import.' : ''}
+            </span>
+          )}
+          {!isNew && item.review_note && <span className="w-full rounded-lg bg-citrus/50 px-3 py-2 text-xs">Please check: {item.review_note}</span>}
         </div>
       </form>
     </li>

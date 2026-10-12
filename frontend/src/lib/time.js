@@ -62,13 +62,22 @@ export function formatDateTime(isoString) {
   }).format(new Date(isoString))
 }
 
+/** Booking windows for a date: a special-day override wins over the weekday; [] if closed. */
+export function windowsFor(config, isoDate) {
+  const override = (config.overrides || []).find((o) => o.date === isoDate)
+  if (override) return override.is_closed ? [] : [override]
+  return config.windows.filter((w) => w.weekday === weekdayOf(isoDate))
+}
+
+export const isClosedDate = (config, isoDate) => (config.overrides || []).some((o) => o.date === isoDate && o.is_closed)
+
 /** Requestable times for a date, from the owner's booking windows. */
 export function slotsFor(config, isoDate) {
   if (!config || !isoDate) return []
   const now = nowInBusinessTz()
   const earliest = isoDate === now.date ? now.minutes + config.min_lead_minutes : -1
   const slots = []
-  for (const w of config.windows.filter((w) => w.weekday === weekdayOf(isoDate))) {
+  for (const w of windowsFor(config, isoDate)) {
     for (let m = toMinutes(w.start_time); m <= toMinutes(w.end_time); m += config.slot_interval_minutes) {
       if (m >= earliest) slots.push(fromMinutes(m))
     }

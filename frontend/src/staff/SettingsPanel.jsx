@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api.js'
-import { WEEKDAYS } from '../lib/time.js'
+import { useSession } from '../lib/session.jsx'
+import { WEEKDAYS, formatDate } from '../lib/time.js'
 
-const hhmm = (t) => t.slice(0, 5)
+const hhmm = (t) => (t ? t.slice(0, 5) : '')
+const tidy = (data) => ({
+  ...data,
+  windows: data.windows.map((w) => ({ ...w, start_time: hhmm(w.start_time), end_time: hhmm(w.end_time) })),
+  overrides: data.overrides.map((o) => ({ ...o, start_time: hhmm(o.start_time), end_time: hhmm(o.end_time), note: o.note || '' })),
+})
 
 export default function SettingsPanel({ onAuthError }) {
   const [settings, setSettings] = useState(null)
   const [message, setMessage] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [newDate, setNewDate] = useState('')
+  const isOwner = useSession().account?.role === 'owner'
 
   useEffect(() => {
-    api('/owner/settings')
-      .then((data) => setSettings({ ...data, windows: data.windows.map((w) => ({ ...w, start_time: hhmm(w.start_time), end_time: hhmm(w.end_time) })) }))
+    api('/staff/settings')
+      .then((data) => setSettings(tidy(data)))
       .catch((err) => !onAuthError(err) && setMessage({ kind: 'error', text: err.message }))
   }, [onAuthError])
 
@@ -24,6 +32,12 @@ export default function SettingsPanel({ onAuthError }) {
     setSettings((s) => ({ ...s, windows: s.windows.map((w, i) => (i === index ? { ...w, [name]: value } : w)) }))
   const addWindow = (weekday) => setSettings((s) => ({ ...s, windows: [...s.windows, { weekday, start_time: '08:00', end_time: '18:00' }] }))
   const removeWindow = (index) => setSettings((s) => ({ ...s, windows: s.windows.filter((_, i) => i !== index) }))
+  const setOverride = (date, change) => setSettings((s) => ({ ...s, overrides: s.overrides.map((o) => (o.date === date ? { ...o, ...change } : o)) }))
+  const addOverride = () => {
+    if (!newDate || settings.overrides.some((o) => o.date === newDate)) return
+    setSettings((s) => ({ ...s, overrides: [...s.overrides, { date: newDate, is_closed: true, start_time: '08:00', end_time: '18:00', note: '' }].sort((a, b) => a.date.localeCompare(b.date)) }))
+    setNewDate('')
+  }
   const copyMonday = () =>
     setSettings((s) => {
       const monday = s.windows.filter((w) => w.weekday === 0)
@@ -39,8 +53,9 @@ export default function SettingsPanel({ onAuthError }) {
       const numbers = Object.fromEntries(
         ['min_party_size', 'max_party_size', 'min_lead_minutes', 'max_advance_days', 'slot_interval_minutes'].map((k) => [k, Number(settings[k])]),
       )
-      const saved = await api('/owner/settings', { method: 'PUT', body: { ...settings, ...numbers } })
-      setSettings({ ...saved, windows: saved.windows.map((w) => ({ ...w, start_time: hhmm(w.start_time), end_time: hhmm(w.end_time) })) })
+      const overrides = settings.overrides.map((o) => ({ date: o.date, is_closed: o.is_closed, start_time: o.is_closed ? null : o.start_time, end_time: o.is_closed ? null : o.end_time, note: o.note || null }))
+      const saved = await api('/staff/settings', { method: 'PUT', body: { ...settings, ...numbers, overrides } })
+      setSettings(tidy(saved))
       setMessage({ kind: 'ok', text: 'Settings saved. New requests follow these rules straight away.' })
     } catch (err) {
       if (!onAuthError(err)) {
@@ -127,6 +142,46 @@ export default function SettingsPanel({ onAuthError }) {
         })}
       </div>
 
+      <h2 className="mb-1 text-[28px] tracking-[-0.6px]">Closed and special dates</h2>
+      <p className="mb-4 text-sm opacity-80">A date listed here ignores its usual weekday window: either no requests are taken, or only within the times you set.</p>
+      <div className="mb-4 divide-y divide-line border-y border-line">
+        {settings.overrides.length === 0 && <p className="py-3 text-sm opacity-65">No closed or special dates.</p>}
+        {settings.overrides.map((o) => (
+          <div key={o.date} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm">
+            <span className="w-40 font-semibold">{formatDate(o.date)}</span>
+            <select aria-label={`${o.date} type`} className="field !w-auto !py-2" value={o.is_closed ? 'closed' : 'special'} onChange={(e) => setOverride(o.date, { is_closed: e.target.value === 'closed' })}>
+              <option value="closed">Closed: no requests</option>
+              <option value="special">Special hours</option>
+            </select>
+            {!o.is_closed && (
+              <>
+                <input type="time" required aria-label={`${o.date} from`} className="field !w-auto !py-2" value={o.start_time || '08:00'} onChange={(e) => setOverride(o.date, { start_time: e.target.value })} />
+                <span>to</span>
+                <input type="time" required aria-label={`${o.date} until`} className="field !w-auto !py-2" value={o.end_time || '18:00'} onChange={(e) => setOverride(o.date, { end_time: e.target.value })} />
+              </>
+            )}
+            <input aria-label={`${o.date} note`} placeholder="Note for staff (optional)" maxLength={160} className="field min-w-[160px] flex-1 !py-2" value={o.note} onChange={(e) => setOverride(o.date, { note: e.target.value })} />
+            <button type="button" className="textlink" onClick={() => setSettings((s) => ({ ...s, overrides: s.overrides.filter((x) => x.date !== o.date) }))}>
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="mb-8 flex flex-wrap items-end gap-3">
+        <label className="text-xs font-semibold uppercase tracking-[1.5px]">
+          Add a date
+          <input type="date" className="field mt-1 !py-2 font-normal normal-case tracking-normal" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+        </label>
+        <button type="button" className="pill !py-2" disabled={!newDate} onClick={addOverride}>
+          Add
+        </button>
+      </div>
+
+      <p className="mb-6 max-w-2xl rounded-[20px] border border-line bg-white/60 p-4 text-sm leading-[1.7]">
+        <strong>Tables and seats are not tracked.</strong> The site does not know how many tables are free and never tells
+        guests a table is available. Every request waits for someone on the team to check and confirm it.
+      </p>
+
       <label className="mb-3 flex items-start gap-3 text-sm">
         <input type="checkbox" className="mt-1 h-5 w-5 accent-forest" checked={settings.booking_enabled} onChange={(e) => set('booking_enabled', e.target.checked)} />
         <span>
@@ -134,10 +189,10 @@ export default function SettingsPanel({ onAuthError }) {
         </span>
       </label>
       <label className="mb-6 flex items-start gap-3 text-sm">
-        <input type="checkbox" className="mt-1 h-5 w-5 accent-forest" checked={settings.owner_confirmed} onChange={(e) => set('owner_confirmed', e.target.checked)} />
+        <input type="checkbox" className="mt-1 h-5 w-5 accent-forest" disabled={!isOwner} checked={settings.owner_confirmed} onChange={(e) => set('owner_confirmed', e.target.checked)} />
         <span>
           <strong>I have reviewed these settings and they are right for Wendy.</strong> Required before the live site
-          accepts requests.
+          accepts requests.{isOwner ? '' : ' Only the owner can change this.'}
         </span>
       </label>
 

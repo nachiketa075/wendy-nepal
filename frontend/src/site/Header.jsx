@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { HOME_FOR_ROLE, useSession } from '../lib/session.jsx'
 import { Brand } from './ui.jsx'
 
 const LINKS = [
@@ -11,6 +12,8 @@ const LINKS = [
 
 export default function Header() {
   const [open, setOpen] = useState(false)
+  const { account } = useSession()
+  const accountLink = account ? [HOME_FOR_ROLE[account.role], account.role === 'customer' ? 'My bookings' : 'Dashboard'] : ['/customer/login', 'Sign in']
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-cream/95 backdrop-blur">
@@ -24,8 +27,8 @@ export default function Header() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <Link to="/customer/login" className="hidden text-sm transition-opacity hover:opacity-65 xl:inline">
-            Sign in
+          <Link to={accountLink[0]} className="hidden text-sm transition-opacity hover:opacity-65 xl:inline">
+            {accountLink[1]}
           </Link>
           <Link to="/#book" className="pill hidden sm:inline-flex">
             Book a table <span aria-hidden="true">↗</span>
@@ -48,8 +51,8 @@ export default function Header() {
               {label}
             </Link>
           ))}
-          <Link to="/customer/login" className="block border-t border-line py-3 text-sm">
-            Sign in
+          <Link to={accountLink[0]} className="block border-t border-line py-3 text-sm">
+            {accountLink[1]}
           </Link>
         </nav>
       )}
