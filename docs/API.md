@@ -22,7 +22,8 @@ All endpoints are under `/api` and exchange JSON. In development, interactive do
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /api/health` | Liveness check |
+| `GET /api/health` | Liveness: the API process is up |
+| `GET /api/ready` | Readiness: database reachable and migrated. `503` otherwise, with no connection details |
 | `GET /api/menu` | The menu (published items only), with `addons` per item and `notes` per section |
 | `GET /api/booking/config` | Whether requests are open, group sizes, notice, weekday windows, closed/special dates |
 | `POST /api/bookings` | Guest table request. Returns only `reference`, `status: "pending"`, `message`. `201` new, `200` replay |
@@ -37,7 +38,7 @@ returns `409 idempotency_conflict`. There is no endpoint to look a booking up by
 |---|---|---|
 | `GET /config` | anyone | `password_reset_by_email`, `min_password_length` |
 | `POST /register` | anyone | Create a **customer** account and sign in. Body: `full_name`, `email`, `password` (12+), `phone?` |
-| `POST /login` | anyone | Body: `email`, `password`, `portal?` (`customer`/`employee`/`owner`). `portal` can only refuse a sign-in on the wrong page; it never changes the role |
+| `POST /login` | anyone | Rate-limited per email and address. Body: `email`, `password`, `portal?` (`customer`/`employee`/`owner`). `portal` can only refuse a sign-in on the wrong page; it never changes the role |
 | `GET /me` | signed in | Account, role, permissions, `csrf_token` |
 | `POST /logout` | signed in | Ends this session |
 | `PATCH /profile` | signed in | `full_name`, `phone` only |

@@ -42,6 +42,9 @@ docker compose up --build
   `PUBLIC_SITE_URL` to match)
 - API docs (development only): <http://localhost:8000/api/docs>
 
+This Compose file is for development (auto-reload, test tools, migrations on start). Production uses
+`docker-compose.prod.yml`; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 The backend applies database migrations each time it starts. It does **not** load menu content on startup.
 
 ### 1. Create the owner account
@@ -162,7 +165,8 @@ Set `EMAIL_DELIVERY` in `.env`:
 | `smtp` | Real delivery using `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`. |
 
 Reset links are single-use, expire after 30 minutes, are stored only as hashes, and the answer is the same
-whether or not the email has an account. `PUBLIC_SITE_URL` must be the site's real address so links work.
+whether or not the email has an account. The token is carried in the link's `#fragment`, which browsers do
+not send to servers, so it does not appear in web-server logs. `PUBLIC_SITE_URL` must be the site's real address so links work.
 SMTP delivery was not tested against a real mail server.
 
 ## Tests
@@ -174,7 +178,7 @@ Alembic migrations. They never touch the development database.
 docker compose --profile test run --rm tests
 ```
 
-149 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
+152 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
 sessions; CSRF and cross-site requests; customer A cannot read or change customer B's booking; guest bookings
 are not claimed by matching contact details; every employee permission and contact-field filtering; immediate
 effect of permission changes and deactivation; owner-only employee management; booking validation in Nepal
@@ -205,6 +209,9 @@ backend/
   data/menu_cm_pdf.json The printed menu, for import
   alembic/versions/     0001 schema, 0002 demo settings, 0003 accounts and workflow
   tests/
+docker-compose.yml      Development stack
+docker-compose.prod.yml Production stack (Caddy + API + PostgreSQL)
+scripts/                backup.sh, restore-rehearsal.sh
 frontend/
   src/site/             Public pages
   src/auth/             Sign-in, registration, password pages
@@ -214,6 +221,8 @@ frontend/
   public/               Photos, logo, menu PDF
 docs/
   API.md                Endpoint reference
+  DEPLOYMENT.md         Production architecture, configuration and release steps
+  OPERATIONS.md         Backups, recovery, monitoring, logs, proposed retention
   OWNER_CONFIRMATION.md Open questions and decisions for the owner
   ASSET_MANIFEST.md     Photos, menu and logo sources
 ```
@@ -228,9 +237,10 @@ docs/
 - **Access control:** enforced in the backend per endpoint and per object (a customer's queries are filtered
   by their own id; out-of-scope bookings are reported as not found).
 - **Rate limits** are stored in PostgreSQL, so they hold across several API workers or instances sharing the
-  database. Limits: sign-in 5 per 15 minutes per email; registration 5 per hour, reset 5 per hour and guest
-  bookings 5 per 10 minutes per address. Behind a reverse proxy, set `TRUST_PROXY_HEADERS=true` so the
-  visitor's address is used. Run `python -m app.cli purge-rate-limits` occasionally (for example daily).
+  database. Limits: sign-in 5 per 15 minutes per email from one address (and 50 per email overall, so one
+  stranger cannot lock the owner out); registration 5 per hour, reset 5 per hour and guest bookings 5 per
+  10 minutes per address. Behind a reverse proxy, set `TRUST_PROXY_HEADERS=true` so the
+  visitor's address is used. Expired records are cleared automatically.
 - **Privacy:** contact details, passwords and reset tokens are not written to logs. Internal notes, history
   and the activity log are never returned to customers.
 - Registration tells a visitor when an email is already registered. That is a deliberate usability choice,
@@ -238,18 +248,12 @@ docs/
 
 ## Before going live
 
-Nothing has been deployed. Still required:
+Nothing has been deployed. The deployment steps, production configuration and what was rehearsed are in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md); backups, recovery, monitoring, logs and a proposed data-retention
+policy are in [docs/OPERATIONS.md](docs/OPERATIONS.md).
 
-1. **Owner decisions** in [docs/OWNER_CONFIRMATION.md](docs/OWNER_CONFIRMATION.md): booking rules, opening
-   hours, menu wording questions, consent for guest photos.
-2. **Hosting** for the API and PostgreSQL with HTTPS and backups. A static host alone (for example Vercel)
-   serves only the frontend; `/api` must be routed to the backend on the same site address so cookies work.
-3. **Environment:** `ENVIRONMENT=production`, `CORS_ORIGINS=https://your-domain`,
-   `PUBLIC_SITE_URL=https://your-domain`. The API refuses to start in production with a wildcard or non-HTTPS
-   origin, insecure cookies, or a development email mode.
-4. **Email provider** for password resets (`EMAIL_DELIVERY=smtp`), tested with a real inbox.
-5. Run the backend without `--reload`, using `requirements.txt` only; create the owner; import the menu.
-6. Decide data retention for guest details and the activity log.
+Still required: the owner's decisions in [docs/OWNER_CONFIRMATION.md](docs/OWNER_CONFIRMATION.md), a server
+and domain, an email provider for password resets, off-server backups and monitoring.
 
-Not verified: a production deployment, real email delivery, browsers other than Chrome, screen readers, and
+Not verified: a real production host, real email delivery, browsers other than Chrome, screen readers, and
 behaviour under heavy load.

@@ -1,0 +1,45 @@
+# SITE_ADDRESS is the public host name, e.g. "wendyjuice.example". With a real
+# host name Caddy obtains and renews the HTTPS certificate by itself (ports 80
+# and 443 must reach this server and DNS must point at it).
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), camera=(), microphone=()"
+		-Server
+	}
+
+	# Requests are small JSON bodies; refuse anything large.
+	request_body {
+		max_size 256KB
+	}
+
+	# The API: same origin as the site, so the session cookie is first-party.
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			health_uri /api/health
+			health_interval 15s
+		}
+	}
+
+	handle {
+		root * /srv
+		# Fingerprinted build files never change; everything else is revalidated.
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/* /images/* /menu/*
+		header @pages Cache-Control "no-cache"
+		# Page addresses such as /menu or /owner/login are handled by the app.
+		try_files {path} /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

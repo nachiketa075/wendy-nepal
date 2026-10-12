@@ -14,4 +14,7 @@ RUN useradd --create-home --uid 1000 app
 USER app
 
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Production default: no auto-reload and no migrations at start-up. Migrations
+# are a deliberate release step: `alembic upgrade head` (see docs/DEPLOYMENT.md).
+# Exec form so the server receives SIGTERM directly and shuts down gracefully.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--timeout-graceful-shutdown", "20", "--no-server-header"]

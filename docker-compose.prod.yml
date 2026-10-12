@@ -1,0 +1,96 @@
+# Production stack for one server: Caddy (HTTPS + built frontend) -> FastAPI -> PostgreSQL.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production <command>
+#
+# Only Caddy publishes ports. The API and the database are reachable only on the
+# private Compose network. See docs/DEPLOYMENT.md before using this.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-backend-env: &backend-env
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  CORS_ORIGINS: ${PUBLIC_SITE_URL:?Set PUBLIC_SITE_URL, e.g. https://your-domain}
+  PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+  SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-12}
+  # Caddy is the only thing in front of the API and sets X-Forwarded-For.
+  TRUST_PROXY_HEADERS: "true"
+  EMAIL_DELIVERY: ${EMAIL_DELIVERY:-disabled}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_FROM: ${SMTP_FROM:-}
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql   # named volume: survives container replacement
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 1m
+    logging: *logging
+
+  backend:
+    build: ./backend            # requirements.txt only; no test tools, no reload
+    restart: unless-stopped
+    environment: *backend-env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # Ready = database reachable and migrated to the version this code expects.
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=4).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    stop_grace_period: 30s
+    logging: *logging
+
+  # Release step, run on purpose before starting a new version:
+  #   docker compose -f docker-compose.prod.yml --env-file .env.production run --rm migrate
+  migrate:
+    build: ./backend
+    profiles: ["release"]
+    environment: *backend-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS to the public host name}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - caddy-data:/data        # HTTPS certificates
+      - caddy-config:/config
+    depends_on:
+      - backend
+    logging: *logging
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
