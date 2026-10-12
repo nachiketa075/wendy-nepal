@@ -1,7 +1,9 @@
 import datetime as dt
+import logging
 
 from fastapi import APIRouter, Depends, Request, Response
-from sqlalchemy import select
+from fastapi.responses import JSONResponse
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session, selectinload
 
 from .. import booking_service
@@ -12,11 +14,31 @@ from ..rate_limit import client_ip, limiter
 from ..schemas import BookingCreate, BookingReceipt, PublicBookingConfig, PublicMenu
 
 router = APIRouter(prefix="/api", tags=["public"])
+logger = logging.getLogger("wendy.health")
+
+# The newest migration in alembic/versions. Update when adding a migration.
+EXPECTED_REVISION = "0003"
 
 
 @router.get("/health")
 def health() -> dict:
+    """Liveness: the API process is up. Does not touch the database."""
     return {"status": "ok"}
+
+
+@router.get("/ready")
+def ready(db: Session = Depends(get_db)):
+    """Readiness: the database answers and its schema is the one this code expects.
+    Reports only ok / not ready, never connection details."""
+    try:
+        revision = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
+    except Exception:  # noqa: BLE001 - any database failure means "not ready"
+        logger.error("readiness check: database unavailable")
+        return JSONResponse({"status": "unavailable"}, status_code=503)
+    if revision != EXPECTED_REVISION:
+        logger.error("readiness check: database schema is not at the expected migration")
+        return JSONResponse({"status": "migration_pending"}, status_code=503)
+    return {"status": "ready"}
 
 
 @router.get("/menu", response_model=PublicMenu)

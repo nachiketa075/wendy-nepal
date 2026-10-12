@@ -10,7 +10,9 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(get_settings().database_url, pool_pre_ping=True)
+# pre_ping replaces connections the database or network dropped; recycle keeps
+# them younger than typical idle timeouts on hosted PostgreSQL.
+engine = create_engine(get_settings().database_url, pool_pre_ping=True, pool_recycle=1800, pool_size=5, max_overflow=5)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 

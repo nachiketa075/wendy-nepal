@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api.js'
 import { BUSINESS } from '../lib/business.js'
 import { HOME_FOR_ROLE, useSession } from '../lib/session.jsx'
@@ -241,8 +241,12 @@ export function ForgotPage() {
 
 /** Choose a password from an emailed reset link or a staff setup link. */
 export function ResetPage() {
-  const [params] = useSearchParams()
-  const token = params.get('token') || ''
+  // The token arrives in the URL fragment (#token=...), which is never sent to
+  // any server. It is read once and then removed from the address bar.
+  const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '')
+  useEffect(() => {
+    if (token) window.history.replaceState(null, '', window.location.pathname)
+  }, [token])
   const [password, setPassword] = useState('')
   const [repeat, setRepeat] = useState('')
   const [error, setError] = useState('')

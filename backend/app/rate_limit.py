@@ -7,6 +7,7 @@ address or an email) are stored only as SHA-256 digests.
 
 import hashlib
 import math
+import random
 
 from fastapi import Request
 from sqlalchemy import text
@@ -35,6 +36,9 @@ class RateLimiter:
                 retry_after = max(1, math.ceil(window_seconds - float(oldest_age)))
             else:
                 conn.execute(text("INSERT INTO rate_limit_events (key_hash) VALUES (:k)"), {"k": digest})
+        if random.random() < 0.01:
+            # Occasional housekeeping for keys that are never hit again.
+            self.purge_expired()
         if retry_after is not None:
             raise ApiError(
                 429,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { AreaShell } from '../auth/AuthLayout.jsx'
+import { Profile } from '../customer/CustomerApp.jsx'
 import { api } from '../lib/api.js'
 import { useSession } from '../lib/session.jsx'
 import { startPolling } from '../lib/status.jsx'
@@ -55,6 +56,7 @@ export default function StaffApp({ portal }) {
     can('menu.manage') && ['menu', 'Menu'],
     isOwner && ['team', 'Team'],
     isOwner && ['activity', 'Activity'],
+    account && account.role !== 'customer' && ['account', 'My account'],
   ].filter(Boolean)
   const [tab, setTab] = useState(null)
   const active = tabs.some(([id]) => id === tab) ? tab : tabs[0]?.[0]
@@ -129,12 +131,13 @@ export default function StaffApp({ portal }) {
         </>
       }
     >
-      {tabs.length === 0 ? (
-        <div role="alert" className="max-w-xl rounded-[20px] border border-line bg-white/60 p-8">
+      {tabs.length <= 1 && account.role === 'employee' && (
+        <div role="alert" className="mb-8 max-w-xl rounded-[20px] border border-line bg-white/60 p-8">
           <h1 className="mb-3 text-[32px]">You don’t have access to anything yet.</h1>
           <p className="text-sm">Your account is active, but the owner has not given it any permissions. Please ask the owner.</p>
         </div>
-      ) : (
+      )}
+      {tabs.length === 0 ? null : (
         <>
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
             <div role="group" aria-label="Dashboard sections" className="flex flex-wrap gap-2">
@@ -179,6 +182,7 @@ export default function StaffApp({ portal }) {
           {active === 'menu' && <MenuPanel onAuthError={handleAuthError} />}
           {active === 'team' && <TeamPanel />}
           {active === 'activity' && <ActivityPanel />}
+          {active === 'account' && <Profile />}
         </>
       )}
       {account.role === 'employee' && (

@@ -22,7 +22,7 @@ def test_owner_invites_an_employee_who_sets_their_own_password(owner_client, db)
     assert created.status_code == 201
     body = created.json()
     assert body["employee"]["permissions"] == [] and body["employee"]["has_password"] is False  # no access by default
-    assert body["setup_url"].startswith("http://localhost:5173/account/reset?token=")
+    assert body["setup_url"].startswith("http://localhost:5173/account/reset#token=")  # fragment: never sent to a server
     account = db.scalar(select(Account).where(Account.email == NEW["email"]))
     assert account.role == "employee" and account.password_hash is None
 

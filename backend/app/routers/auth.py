@@ -8,7 +8,7 @@ import datetime as dt
 import logging
 import secrets
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -88,7 +88,9 @@ def create_reset_token(db: Session, account: Account, purpose: str, ttl: dt.time
 
 
 def reset_url(token: str) -> str:
-    return f"{get_settings().public_site_url.rstrip('/')}/account/reset?token={token}"
+    # The token sits in the URL fragment (#...), which browsers never send to a
+    # server, so it cannot end up in web-server or proxy access logs or in a Referer.
+    return f"{get_settings().public_site_url.rstrip('/')}/account/reset#token={token}"
 
 
 @router.get("/config", response_model=AuthConfig)
@@ -119,8 +121,13 @@ def register(data: RegisterIn, request: Request, response: Response, db: Session
 @router.post("/login", response_model=AccountOut)
 def login(data: LoginIn, request: Request, response: Response, db: Session = Depends(get_db)):
     email = data.email.lower()
-    limiter.hit(f"login:ip:{client_ip(request)}", limit=20, window_seconds=15 * 60)
-    limiter.hit(f"login:email:{email}", limit=5, window_seconds=15 * 60)
+    ip = client_ip(request)
+    limiter.hit(f"login:ip:{ip}", limit=20, window_seconds=15 * 60)
+    # Five tries per address for one email. A much higher cap per email alone
+    # still slows guessing from many addresses, without letting one stranger
+    # lock the owner out by failing on purpose.
+    limiter.hit(f"login:email-ip:{email}:{ip}", limit=5, window_seconds=15 * 60)
+    limiter.hit(f"login:email:{email}", limit=50, window_seconds=15 * 60)
 
     account = db.scalar(select(Account).where(Account.email == email))
     valid = verify_password(data.password, account.password_hash if account else None)
@@ -173,7 +180,7 @@ def change_password(data: PasswordChange, request: Request, session: AccountSess
 
 
 @router.post("/password-reset/request", status_code=202)
-def request_password_reset(data: ResetRequest, request: Request, db: Session = Depends(get_db)):
+def request_password_reset(data: ResetRequest, request: Request, background: BackgroundTasks, db: Session = Depends(get_db)):
     """Always answers the same way, whether or not the email has an account."""
     email = data.email.lower()
     limiter.hit(f"reset:ip:{client_ip(request)}", limit=5, window_seconds=60 * 60)
@@ -187,15 +194,16 @@ def request_password_reset(data: ResetRequest, request: Request, db: Session = D
         ttl = dt.timedelta(minutes=get_settings().password_reset_ttl_minutes)
         token, _ = create_reset_token(db, account, "reset", ttl)
         db.commit()
-        sent = email_delivery.send_email(
+        # Sent after the response, so the reply takes the same time whether or
+        # not the email has an account, and a slow mail server cannot hold it up.
+        background.add_task(
+            email_delivery.send_email,
             account.email,
             "Choose a new password for Wendy Juice Shop",
             f"Hello {account.full_name},\n\nUse this link to choose a new password. It works once and expires in "
             f"{get_settings().password_reset_ttl_minutes} minutes:\n\n{reset_url(token)}\n\n"
             "If you did not ask for this, you can ignore this message.\n",
         )
-        if not sent:
-            logger.warning("password reset email could not be delivered")
     return {"email_delivery": True, "message": RESET_REQUESTED}
 
 

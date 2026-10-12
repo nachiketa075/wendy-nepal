@@ -50,7 +50,13 @@ async def reject_cross_site_writes(request: Request, call_next):
                 {"error": {"code": "bad_origin", "message": "Request origin is not allowed.", "fields": {}}},
                 status_code=403,
             )
-    return await call_next(request)
+    response = await call_next(request)
+    # API answers can hold personal data; never let a browser or proxy store
+    # them, except the two public read-only resources.
+    if request.url.path.startswith("/api/") and "cache-control" not in response.headers:
+        public = request.method == "GET" and request.url.path in ("/api/menu", "/api/booking/config")
+        response.headers["Cache-Control"] = "public, max-age=60" if public else "no-store"
+    return response
 
 
 if settings.cors_origin_list:

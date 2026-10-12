@@ -3,8 +3,9 @@ import { api } from '../lib/api.js'
 import { whatsappLink } from '../lib/business.js'
 import { useSession } from '../lib/session.jsx'
 import { STATUS_LABEL, StatusBadge } from '../lib/status.jsx'
-import { formatDate, formatDateTime, formatTime } from '../lib/time.js'
+import { formatDate, formatDateTime, formatTime, nowInBusinessTz } from '../lib/time.js'
 
+const PAGE = 50
 const STATUSES = ['pending', 'confirmed', 'checked_in', 'completed', 'declined', 'cancelled', 'no_show']
 const ACTION = {
   confirmed: { label: 'Confirm', className: 'pill pill-dark' },
@@ -18,7 +19,9 @@ const ACTION = {
 export default function BookingsPanel({ refreshKey, onChanged }) {
   const { account, handleAuthError } = useSession()
   const isOwner = account.role === 'owner'
+  // Pending requests from any date are shown first, so none can be missed.
   const [filters, setFilters] = useState({ status: 'pending', date_from: '', date_to: '', cancellation: '' })
+  const [limit, setLimit] = useState(PAGE)
   const [data, setData] = useState(null)
   const [employees, setEmployees] = useState([])
   const [error, setError] = useState('')
@@ -27,15 +30,15 @@ export default function BookingsPanel({ refreshKey, onChanged }) {
   const load = useCallback(async () => {
     setLoading(true)
     setError('')
-    const query = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString()
+    const query = new URLSearchParams([...Object.entries(filters).filter(([, v]) => v), ['limit', limit]]).toString()
     try {
-      setData(await api(`/staff/bookings${query ? `?${query}` : ''}`))
+      setData(await api(`/staff/bookings?${query}`))
     } catch (err) {
       if (!handleAuthError(err)) setError(err.status === 403 ? 'You no longer have permission to view bookings.' : err.message)
     } finally {
       setLoading(false)
     }
-  }, [filters, handleAuthError])
+  }, [filters, limit, handleAuthError])
 
   useEffect(() => {
     load()
@@ -50,7 +53,11 @@ export default function BookingsPanel({ refreshKey, onChanged }) {
     onChanged?.()
   }, [load, onChanged])
 
-  const setFilter = (name, value) => setFilters((f) => ({ ...f, [name]: value }))
+  const setFilter = (name, value) => {
+    setLimit(PAGE)
+    setFilters((f) => ({ ...f, [name]: value }))
+  }
+  const today = nowInBusinessTz().date
   const total = data ? Object.values(data.counts).reduce((a, b) => a + b, 0) : 0
 
   return (
@@ -89,6 +96,12 @@ export default function BookingsPanel({ refreshKey, onChanged }) {
             <input type="checkbox" className="h-4 w-4 accent-forest" checked={Boolean(filters.cancellation)} onChange={(e) => setFilter('cancellation', e.target.checked ? 'pending' : '')} />
             Cancellation requests only
           </label>
+          <button type="button" className="textlink mb-2" onClick={() => setFilters((f) => ({ ...f, date_from: today, date_to: today }))}>
+            Today
+          </button>
+          <button type="button" className="textlink mb-2" onClick={() => setFilters((f) => ({ ...f, date_from: today, date_to: '' }))}>
+            From today
+          </button>
           {(filters.date_from || filters.date_to) && (
             <button type="button" className="textlink mb-2" onClick={() => setFilters((f) => ({ ...f, date_from: '', date_to: '' }))}>
               Clear dates
@@ -106,7 +119,13 @@ export default function BookingsPanel({ refreshKey, onChanged }) {
         </p>
       )}
       <p role="status" className="mb-4 text-sm opacity-75">
-        {loading ? 'Loading…' : data ? `${data.total} request${data.total === 1 ? '' : 's'} shown, by requested date.` : ''}
+        {loading
+          ? 'Loading…'
+          : data
+            ? data.total > data.items.length
+              ? `Showing the first ${data.items.length} of ${data.total} requests, earliest date first.`
+              : `${data.total} request${data.total === 1 ? '' : 's'}, earliest date first.`
+            : ''}
       </p>
 
       {data && data.items.length === 0 && !loading && <p className="rounded-[20px] bg-sage p-8 text-sm">No requests match these filters.</p>}
@@ -116,6 +135,11 @@ export default function BookingsPanel({ refreshKey, onChanged }) {
           <BookingCard key={`${booking.id}-${booking.version}`} booking={booking} employees={employees} isOwner={isOwner} onChanged={changed} />
         ))}
       </ul>
+      {data && data.total > data.items.length && (
+        <button type="button" className="pill mt-6" disabled={loading} onClick={() => setLimit((n) => Math.min(200, n + PAGE))}>
+          {limit >= 200 ? 'Narrow the dates to see more' : 'Show more'}
+        </button>
+      )}
     </section>
   )
 }

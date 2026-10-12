@@ -251,3 +251,52 @@ def test_dev_file_delivery_writes_to_a_folder_not_the_log(client, tmp_path, monk
     files = list(tmp_path.iterdir())
     assert len(files) == 1 and "token=" in files[0].read_text()
     assert "token=" not in caplog.text and "c@example.com" not in caplog.text
+
+
+def test_reset_link_keeps_the_token_out_of_server_logs(client):
+    """The token is in the URL fragment, which browsers do not send to servers."""
+    make_account("customer", "c@example.com")
+    client.post("/api/auth/password-reset/request", json={"email": "c@example.com"})
+    link = re.search(r"https?://\S+", email_delivery.TEST_OUTBOX[0]["body"]).group(0)
+    assert "/account/reset#token=" in link and "?" not in link
+
+
+def test_one_stranger_cannot_lock_an_account_for_everyone(client):
+    make_account("owner", OWNER_EMAIL)
+    attempt = {"email": OWNER_EMAIL, "password": "wrong password here"}
+    assert [client.post("/api/auth/login", json=attempt).status_code for _ in range(6)][-1] == 429
+
+    # The real owner, arriving from another address, can still sign in.
+    from app import rate_limit
+    from app.routers import auth as auth_router
+
+    original = auth_router.client_ip
+    auth_router.client_ip = lambda request: "203.0.113.9"
+    try:
+        assert client.post("/api/auth/login", json={"email": OWNER_EMAIL, "password": PASSWORD}).status_code == 200
+    finally:
+        auth_router.client_ip = original
+    assert rate_limit.limiter is not None
+
+
+def test_readiness_and_cache_headers(client, db):
+    assert client.get("/api/health").json() == {"status": "ok"}
+    ready = client.get("/api/ready")
+    assert ready.status_code == 200 and ready.json() == {"status": "ready"}
+
+    db.execute(text("UPDATE alembic_version SET version_num = '0002'"))
+    db.commit()
+    try:
+        pending = client.get("/api/ready")
+        assert pending.status_code == 503 and pending.json() == {"status": "migration_pending"}
+        assert "postgres" not in pending.text.lower()
+    finally:
+        db.execute(text("UPDATE alembic_version SET version_num = '0003'"))
+        db.commit()
+
+    make_account("customer", "c@example.com")
+    signed_in = sign_in("c@example.com")
+    assert signed_in.get("/api/auth/me").headers["cache-control"] == "no-store"
+    assert signed_in.get("/api/customer/bookings").headers["cache-control"] == "no-store"
+    assert client.get("/api/menu").headers["cache-control"] == "public, max-age=60"
+    assert client.post("/api/auth/login", json={"email": "x@example.com", "password": "nope nope nope"}).headers["cache-control"] == "no-store"

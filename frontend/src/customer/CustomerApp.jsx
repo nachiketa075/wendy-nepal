@@ -281,7 +281,7 @@ function BookingCard({ booking, onChanged }) {
   )
 }
 
-function Profile() {
+export function Profile() {
   const { account, apply, handleAuthError } = useSession()
   const [form, setForm] = useState({ full_name: account.full_name, phone: account.phone || '' })
   const [errors, setErrors] = useState({})

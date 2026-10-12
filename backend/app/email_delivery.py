@@ -9,6 +9,7 @@ import datetime as dt
 import logging
 import re
 import smtplib
+import sys
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -54,12 +55,19 @@ def send_email(to: str, subject: str, body: str) -> bool:
     message["Subject"] = subject
     message.set_content(body)
     try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
-            smtp.starttls()
+        # Port 465 speaks TLS from the first byte; other ports upgrade with STARTTLS.
+        if settings.smtp_port == 465:
+            smtp = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15)
+        else:
+            smtp = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
+        with smtp:
+            if settings.smtp_port != 465:
+                smtp.starttls()
             if settings.smtp_username:
                 smtp.login(settings.smtp_username, settings.smtp_password)
             smtp.send_message(message)
     except (OSError, smtplib.SMTPException):
-        logger.exception("email delivery failed")  # no recipient or content in the log
+        # Type of failure only: no recipient, link or message content in the log.
+        logger.error("email delivery failed: %s", sys.exc_info()[0].__name__)
         return False
     return True
