@@ -17,7 +17,8 @@ Internet ──HTTPS──> Caddy (ports 80/443)
   (`SameSite=Strict`) and no cross-origin setup is needed.
 - **Only Caddy publishes ports.** The API and database are reachable only inside the Compose network.
 - **HTTPS** certificates are obtained and renewed by Caddy once the domain's DNS points at the server.
-- **The API runs without reload**, as a non-root user, with 2 workers. Rate limits live in PostgreSQL, so
+- **The API runs without reload**, as a non-root user, with 2 workers, on dependencies installed from a
+  hash-pinned lockfile. Rate limits live in PostgreSQL, so
   they hold across workers.
 - **Migrations are a release step**, not run at start-up. The API reports "not ready" until they are applied.
 
@@ -61,6 +62,7 @@ chmod 600 .env.production
 | `SITE_ADDRESS` | The host name only, for example `wendyjuice.example` |
 | `PUBLIC_SITE_URL` | The same site with `https://`, for example `https://wendyjuice.example`. Used as the allowed origin and in reset/setup links. **Not** a localhost address |
 | `POSTGRES_PASSWORD` | `openssl rand -hex 32` |
+| `.env.backup` (separate file) | Backup settings; see `docs/OPERATIONS.md`. Holds a path to a **public** key only |
 | `EMAIL_DELIVERY` | `disabled`, or `smtp` with the `SMTP_*` values filled in |
 
 The API refuses to start in production if the origin is a wildcard or not HTTPS, if `PUBLIC_SITE_URL` is not
@@ -99,7 +101,8 @@ Then, signed in as the owner at `/owner/login`:
 2. **Team**: add employees and their permissions; pass each their one-time link.
 3. **Menu**: resolve the items marked "Please check".
 4. Send one real test request from a phone, confirm it, and check it under the customer's "My bookings".
-5. Take the first backup and rehearse a restore (`OPERATIONS.md`).
+5. Set up encrypted backups: key pair, off-server copy and schedule, then take the first backup and rehearse
+   a restore (`OPERATIONS.md`). Until that is done and checked, there are no backups.
 
 ## Releasing a new version
 
@@ -114,6 +117,22 @@ curl -fsS https://YOUR-DOMAIN/api/ready
 
 When adding a migration, also update `EXPECTED_REVISION` in `backend/app/routers/public.py`, so the
 readiness check knows the schema the code expects.
+
+## Content Security Policy: report-only for now
+
+`frontend/Caddyfile` sends `Content-Security-Policy-Report-Only`. **Browsers do not block anything under a
+report-only policy**; they only note violations in the browser console. It was validated on 13 Oct 2026
+against the main customer, staff and owner flows on a local throwaway stack with no violations.
+
+To enforce it after launch:
+
+1. Use the live site normally for a week or two with the browser console open on a few visits (public
+   pages, booking, sign-in, dashboard). There is no report collector, so violations are visible only there.
+2. If none appear, rename the header in `frontend/Caddyfile` to `Content-Security-Policy`, rebuild and
+   release (`dc build web && dc up -d web`).
+3. Re-check the same flows. To go back, rename the header again.
+
+If a new external resource is ever added (a map embed, analytics, another font host), add it to the policy first.
 
 ## Checks
 

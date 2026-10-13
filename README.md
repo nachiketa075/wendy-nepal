@@ -169,6 +169,29 @@ whether or not the email has an account. The token is carried in the link's `#fr
 not send to servers, so it does not appear in web-server logs. `PUBLIC_SITE_URL` must be the site's real address so links work.
 SMTP delivery was not tested against a real mail server.
 
+## Updating dependencies
+
+**Backend.** `backend/requirements.in` and `requirements-dev.in` list what the project needs, as ranges.
+`backend/requirements.txt` and `requirements-dev.txt` are **generated lockfiles**: every package, exact
+version, with hashes. Docker builds install only from the lockfiles with `pip --require-hashes`, so a build
+cannot pick up a different or altered release. To update, regenerate them inside the production base image
+and review the diff:
+
+```bash
+docker run -d --name wendy-lock -v "$PWD/backend":/src:ro -w /work python:3.13-slim sleep 600
+docker exec wendy-lock python -m pip install pip-tools
+docker exec wendy-lock cp /src/requirements.in /src/requirements-dev.in /work/
+docker exec wendy-lock pip-compile --generate-hashes --allow-unsafe --output-file=requirements.txt requirements.in
+docker exec wendy-lock pip-compile --generate-hashes --allow-unsafe --output-file=requirements-dev.txt requirements-dev.in
+docker cp wendy-lock:/work/requirements.txt backend/ && docker cp wendy-lock:/work/requirements-dev.txt backend/
+docker rm -f wendy-lock
+```
+
+Then run the tests and check the new versions for advisories before committing.
+
+**Frontend.** `frontend/package-lock.json` is the lockfile; Docker builds use `npm ci`. `package.json` has
+one `overrides` entry that lifts a build-time CSS parser to its patched release.
+
 ## Tests
 
 Tests run against a **separate, throwaway PostgreSQL database** (in memory) and build its schema through the
@@ -178,16 +201,25 @@ Alembic migrations. They never touch the development database.
 docker compose --profile test run --rm tests
 ```
 
-152 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
+163 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
 sessions; CSRF and cross-site requests; customer A cannot read or change customer B's booking; guest bookings
 are not claimed by matching contact details; every employee permission and contact-field filtering; immediate
 effect of permission changes and deactivation; owner-only employee management; booking validation in Nepal
 time, closed dates and special days; idempotent and simultaneous submissions; invalid and simultaneous status
 changes; cancellation request and resolution; password reset; the repeatable menu import and owner edits; the
-shared public/owner menu; rate limiting.
+shared public/owner menu; rate limiting; server logs and admin command output free of customer data.
 
 To run them outside Docker, point `TEST_DATABASE_URL` at a database whose name ends in `_test` (the suite
-refuses anything else, because it drops and rebuilds the schema).
+refuses anything else, because it drops and rebuilds the schema). Install the same locked packages the
+containers use:
+
+```bash
+cd backend && python -m venv .venv && .venv/bin/pip install --require-hashes -r requirements-dev.txt
+TEST_DATABASE_URL=postgresql+psycopg://USER:PASSWORD@localhost:5432/wendy_test .venv/bin/python -m pytest -q
+```
+
+The lockfiles are generated for Python 3.13 on Linux (the container image). On another Python version or
+operating system the hash check may refuse a package; use the Docker command above in that case.
 
 ## Project layout
 
@@ -211,7 +243,9 @@ backend/
   tests/
 docker-compose.yml      Development stack
 docker-compose.prod.yml Production stack (Caddy + API + PostgreSQL)
-scripts/                backup.sh, restore-rehearsal.sh
+scripts/                backup.sh (encrypted), restore-rehearsal.sh
+deploy/systemd/         Example timer and service for scheduled backups
+brain/security/         Security audit, threat model, checklist and related notes
 frontend/
   src/site/             Public pages
   src/auth/             Sign-in, registration, password pages
@@ -241,7 +275,10 @@ docs/
   stranger cannot lock the owner out); registration 5 per hour, reset 5 per hour and guest bookings 5 per
   10 minutes per address. Behind a reverse proxy, set `TRUST_PROXY_HEADERS=true` so the
   visitor's address is used. Expired records are cleared automatically.
-- **Privacy:** contact details, passwords and reset tokens are not written to logs. Internal notes, history
+- **Privacy:** contact details, passwords and reset tokens are not written to logs. Unexpected errors are
+  logged as a reference id, the error type and where it happened, never the error text (which can quote
+  customer data); the same reference is returned to the client. The production database is configured not to
+  echo failing statements or row values into its own log. Internal notes, history
   and the activity log are never returned to customers.
 - Registration tells a visitor when an email is already registered. That is a deliberate usability choice,
   limited by the registration rate limit.
