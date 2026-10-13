@@ -1,0 +1,18 @@
+# Direct runtime dependencies, as ranges. This file is the INPUT.
+# The versions actually installed are pinned, with hashes, in requirements.txt,
+# which is generated from this file (see "Updating dependencies" in the README).
+fastapi>=0.118,<1
+# Plain uvicorn plus the two speed-ups it uses in production. The "standard"
+# extra is avoided: it adds websockets and watchfiles, which this app never uses.
+uvicorn>=0.37,<1
+uvloop>=0.21,<1
+httptools>=0.6,<1
+sqlalchemy>=2.0.44,<2.1
+alembic>=1.17,<2
+psycopg[binary]>=3.2.10,<4
+pydantic>=2.12,<3
+pydantic-settings>=2.11,<3
+email-validator>=2.2,<3
+argon2-cffi>=25.1,<26
+phonenumbers>=9.0,<10
+tzdata>=2025.2

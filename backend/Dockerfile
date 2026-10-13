@@ -3,10 +3,13 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
-# Use requirements-dev.txt (adds the test tools) for local development.
+# Dependencies come from the generated lockfiles (exact versions + hashes).
+# requirements.txt = runtime only; requirements-dev.txt adds the test tools.
 ARG REQUIREMENTS=requirements.txt
 COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir -r ${REQUIREMENTS}
+# --require-hashes refuses anything not pinned and hashed in the lockfile, so a
+# build cannot silently pick up a different or tampered release.
+RUN pip install --no-cache-dir --require-hashes -r ${REQUIREMENTS}
 
 COPY . .
 

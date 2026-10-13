@@ -1,0 +1,5 @@
+# Test tools on top of the locked runtime set. INPUT for requirements-dev.txt.
+-c requirements.txt
+-r requirements.in
+pytest>=8.4,<10
+httpx>=0.28,<1
