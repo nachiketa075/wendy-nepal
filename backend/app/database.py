@@ -12,7 +12,17 @@ class Base(DeclarativeBase):
 
 # pre_ping replaces connections the database or network dropped; recycle keeps
 # them younger than typical idle timeouts on hosted PostgreSQL.
-engine = create_engine(get_settings().database_url, pool_pre_ping=True, pool_recycle=1800, pool_size=5, max_overflow=5)
+# hide_parameters keeps bound values (names, emails, phone numbers, password
+# hashes) out of the text of database exceptions. It does not remove values
+# PostgreSQL itself puts in an error's DETAIL; app/safe_logging.py covers that.
+engine = create_engine(
+    get_settings().database_url,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+    pool_size=5,
+    max_overflow=5,
+    hide_parameters=True,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 

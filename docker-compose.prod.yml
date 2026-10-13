@@ -34,6 +34,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
+    # Keep customer data out of the database's own log: do not echo failing
+    # statements, and omit DETAIL lines (which quote row values).
+    command: ["postgres", "-c", "log_min_error_statement=panic", "-c", "log_error_verbosity=terse"]
     volumes:
       - db-data:/var/lib/postgresql   # named volume: survives container replacement
     healthcheck:
