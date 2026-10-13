@@ -1,0 +1,12 @@
+# Daily at 03:00 Pokhara time (21:15 UTC). Enable with:
+#   systemctl enable --now wendy-backup.timer
+[Unit]
+Description=Daily Wendy Juice Shop database backup
+
+[Timer]
+OnCalendar=*-*-* 21:15:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
