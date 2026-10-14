@@ -49,6 +49,8 @@ services:
 
   backend:
     build: ./backend            # requirements.txt only; no test tools, no reload
+    # Named so the migrate step below runs exactly this image.
+    image: wendy-backend:release
     restart: unless-stopped
     environment: *backend-env
     depends_on:
@@ -66,8 +68,12 @@ services:
 
   # Release step, run on purpose before starting a new version:
   #   docker compose -f docker-compose.prod.yml --env-file .env.production run --rm migrate
+  # It has no build of its own: it runs the image `build` just made for the API.
+  # (A separate build here was skipped by `build`, because of the profile, so a
+  # later release ran the previous version's migrations and changed nothing.)
   migrate:
-    build: ./backend
+    image: wendy-backend:release
+    pull_policy: never
     profiles: ["release"]
     environment: *backend-env
     command: ["alembic", "upgrade", "head"]
