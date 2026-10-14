@@ -42,4 +42,24 @@ docker exec "$name" psql -U postgres -d rehearsal -At -F ' = ' -c "
   UNION ALL SELECT 'menu_categories', count(*)::text FROM menu_categories
   UNION ALL SELECT 'booking_windows', count(*)::text FROM booking_windows
   UNION ALL SELECT 'activity_log', count(*)::text FROM activity_log"
+
+# Inventory (migration 0004 and later): counts, whether every item's stock
+# equals the balance after its latest movement, a fingerprint to compare with
+# the source database, and whether stock history is still append-only.
+if [ "$(docker exec "$name" psql -U postgres -d rehearsal -qAtc "SELECT to_regclass('inventory_movements') IS NOT NULL")" = t ]; then
+  docker exec "$name" psql -U postgres -d rehearsal -At -F ' = ' -c "
+    SELECT 'inventory_items', count(*)::text FROM inventory_items
+    UNION ALL SELECT 'inventory_movements', count(*)::text FROM inventory_movements
+    UNION ALL SELECT 'inventory_balance_mismatches', count(*)::text FROM inventory_items i
+      WHERE i.quantity <> COALESCE((SELECT m.balance_after FROM inventory_movements m WHERE m.item_id = i.id ORDER BY m.id DESC LIMIT 1), 0)
+    UNION ALL SELECT 'inventory_fingerprint', md5(
+      COALESCE((SELECT string_agg(concat_ws('|', id, name, unit, quantity, version, is_active), ',' ORDER BY id) FROM inventory_items), '') || '#' ||
+      COALESCE((SELECT string_agg(concat_ws('|', id, item_id, kind, quantity_change, balance_after, reason, actor_name, created_at), ',' ORDER BY id) FROM inventory_movements), ''))"
+  if [ "$(docker exec "$name" psql -U postgres -d rehearsal -qAtc 'SELECT count(*) FROM inventory_movements')" != 0 ]; then
+    if docker exec "$name" psql -U postgres -d rehearsal -qAtc 'UPDATE inventory_movements SET reason = reason' >/dev/null 2>&1; then
+      echo "inventory_append_only = NO: an update of stock history was accepted" >&2; exit 1
+    fi
+    echo "inventory_append_only = yes (update refused)"
+  fi
+fi
 echo "Throwaway database removed."
