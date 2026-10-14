@@ -1,6 +1,6 @@
 # Security checklist
 
-**Baseline:** commit `834e59f26541e51977dcec21047423aa82f2c1a9` (the audited commit) on `release/wendy-production-review`, plus the remediation changes of 13 October 2026 described in `04-findings-and-recommendations.md` ("Status update"), committed after it on the same branch (`git log 834e59f..release/wendy-production-review`).
+**Baseline:** commit `834e59f26541e51977dcec21047423aa82f2c1a9` (the audited commit) on `release/wendy-production-review`, plus the remediation changes of 13 October 2026 described in `04-findings-and-recommendations.md` ("Status update"), committed after it on the same branch (`git log 834e59f..release/wendy-production-review`). Entries marked "added 14 Oct 2026" describe the staff inventory feature, committed after that on the same branch.
 
 Status key: **Done** = implemented; "(test)" means an automated test covering it was run and passed on
 13 October 2026, "(code)" means it was read in the source only. **Open** = an unresolved finding.
@@ -42,6 +42,11 @@ Passing tests show the tested cases behave as intended; they do not prove the ab
 | A28 | Breached-password check; registration email disclosure | Open | F-13 |
 | A29 | "Sign out everywhere" for customers and owner; idle timeout | Open | F-14 |
 | A30 | Bot protection on public forms | Open | F-09 |
+| A31 | Inventory reachable only with `inventory.view`; writes need their own permission (added 14 Oct 2026) | Done (test, browser) | `routers/inventory.py:32-47`; `tests/test_inventory.py` |
+| A32 | Inventory permissions granted to nobody by default; dependency enforced | Done (test) | `permissions.py:26`; `routers/owner.py:47`; migration `0004` touches no account |
+| A33 | Stock entries atomic, locked, idempotent; no negative stock | Done (test) | `inventory_service.py:93`, `:101`, `:202`; database checks in `0004` |
+| A34 | Stock history append-only; actor from the session | Done (test) | Trigger in `0004`; `inventory_service.py` `_movement` |
+| A35 | Inventory kept out of public responses | Done (test) | `test_inventory_never_appears_in_public_responses` |
 
 ## B. Build and dependencies
 
@@ -61,10 +66,10 @@ Passing tests show the tested cases behave as intended; they do not prove the ab
 | # | Item | Status | Evidence / finding |
 |---|---|---|---|
 | C1 | Only the proxy publishes ports | Done (code) | `docker-compose.prod.yml` |
-| C2 | API runs as non-root, no reload, migrations as a release step | Done (code); observed on a throwaway stack | `backend/Dockerfile`; `docker-compose.prod.yml` |
+| C2 | API runs as non-root, no reload, migrations as a release step | Done (code); observed on a throwaway stack, including an upgrade release on 14 Oct 2026 | `backend/Dockerfile`; `docker-compose.prod.yml`. The migrate step ran a stale image on every release after the first; fixed 14 Oct 2026 (shared `wendy-backend:release` image) |
 | C3 | Production refuses wildcard/non-HTTPS origins, insecure cookies, dev email mode | Done (test) | `config.py:47-64` |
 | C4 | HSTS, nosniff, frame denial, referrer policy | Done (code); observed on a throwaway stack | `frontend/Caddyfile` |
-| C5 | Content Security Policy **enforced** | **Open** — report-only | F-04. Policy validated with zero violations across main flows; browsers do not block under report-only |
+| C5 | Content Security Policy **enforced** | **Open** — report-only | F-04. Policy validated with zero violations across main flows, and again on 14 Oct 2026 across the inventory, team and booking flows; browsers do not block under report-only |
 | C6 | Database log does not echo statements or row values | Done (code); observed on a throwaway stack | `docker-compose.prod.yml:39` |
 | C7 | Request body size cap | Done (code); observed (413) on a throwaway stack | `frontend/Caddyfile` |
 | C8 | Backups encrypted before reaching disk; server holds no private key | Done; tested with synthetic data — **F-03 encryption fixed** | `scripts/backup.sh` |
@@ -97,6 +102,7 @@ Passing tests show the tested cases behave as intended; they do not prove the ab
 | E3 | Decide when staff second-factor sign-in is built (`mfa-plan.md`) |
 | E4 | Accept or change: registration reveals registered emails; fonts loaded from Google |
 | E5 | Publish a privacy notice |
+| E6 | Decide which employees get inventory access, and whether recording stock should also allow editing items |
 
 ## F. Before each release
 

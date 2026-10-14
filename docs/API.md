@@ -15,7 +15,8 @@ All endpoints are under `/api` and exchange JSON. In development, interactive do
 - **Errors.** `{"error": {"code": "...", "message": "...", "fields": {"field": "message"}}}`. Common codes:
   `validation_error` (422), `not_authenticated` (401), `forbidden` (403), `csrf_failed` (403), `not_found`
   (404), `rate_limited` (429, with `Retry-After`), `stale_update` (409), `invalid_transition` (409),
-  `not_allowed_now` (409), `idempotency_conflict` (409), `booking_unavailable` (409). Stack traces are never returned.
+  `not_allowed_now` (409), `idempotency_conflict` (409), `booking_unavailable` (409), and for inventory
+  `insufficient_stock`, `unit_locked`, `item_archived`, `name_taken` (all 409). Stack traces are never returned.
 - **Time.** Booking dates and times are in `Asia/Kathmandu`. Timestamps are ISO 8601 with timezone.
 
 ## Public
@@ -94,14 +95,45 @@ Customer responses never include internal notes, the assigned employee, history 
 Time rules: a request whose time has passed cannot be confirmed; check-in only on the booking's date;
 no-show only after its time. Every change is recorded with who, when and the reason.
 
+## Inventory (`/api/staff/inventory`, owner or employee with `inventory.view`)
+
+Staff only. Visitors get `401`, customers and employees without `inventory.view` get `403`, before any
+inventory data is read. Nothing here is used by `/api/menu` or any public route.
+
+| Endpoint | Permission (owner always passes) |
+|---|---|
+| `GET /items?search&category&status=active\|archived\|all&low_stock&limit&offset` → `items`, `total`, `low_stock_count` | `inventory.view` |
+| `GET /items/{id}` | `inventory.view` |
+| `POST /items` body `name`, `category`, `unit`, `low_stock_threshold?`, `opening_quantity?`, `idempotency_key` | `inventory.view` + `inventory.manage_items` |
+| `PATCH /items/{id}` body `version`, `name?`, `category?`, `unit?`, `low_stock_threshold?`, `is_active?` | `inventory.view` + `inventory.manage_items` |
+| `POST /items/{id}/movements` body `kind` (`stock_in`/`stock_out`/`adjustment`), `quantity`, `reason?`, `version?`, `idempotency_key` | `inventory.view` + `inventory.adjust_stock` |
+| `GET /movements?item_id&limit&offset` (newest first) | `inventory.view` |
+
+- **Categories:** `fruit_veg`, `dairy`, `coffee_tea`, `dry_goods`, `packaging`, `cleaning`, `other`.
+  **Units:** `kg`, `litre`, `piece`.
+- **Quantities** are sent and returned as decimal strings (numbers are accepted on input): at most 3 decimal
+  places, never negative, whole numbers for `piece`. Responses drop trailing zeros (`"2.5"`, `"100"`).
+- **Movements.** `stock_in`/`stock_out`: `quantity` is the amount (more than 0). `adjustment`: `quantity` is the
+  counted stock, which becomes the new balance; `reason` and the item's current `version` are required. A stock
+  out larger than the stock is `409 insufficient_stock`. Each movement returns `quantity_change`,
+  `balance_after`, `actor_name`, `actor_role`, `reason` and `created_at`. There is no route to edit or delete one.
+- **Opening stock.** `opening_quantity` above 0 on `POST /items` is recorded as an `opening` movement.
+- **Idempotency.** The same `idempotency_key` with the same body returns the entry already recorded (`200`
+  instead of `201`); with a different body it is `409 idempotency_conflict`. Item creation without opening
+  stock relies on the unique name instead (`409 name_taken`, case-insensitive).
+- **Versions.** `PATCH /items/{id}` and adjustments need the `version` last seen; otherwise `409 stale_update`.
+  `PATCH` has no quantity field. `unit` cannot change once any movement exists (`409 unit_locked`).
+  `is_active: false` archives an item; archived items take no movements (`409 item_archived`).
+- **Rate limit.** 300 inventory changes per account per 15 minutes (`429`).
+
 ## Owner (`/api/owner`, role `owner`)
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /permissions` | The permission keys and labels |
+| `GET /permissions` | The permission keys, labels and `requires` (the permission each one depends on, or `null`) |
 | `GET /employees` | Employees with permissions, active sign-ins, whether a password is set |
 | `POST /employees` body `email`, `full_name`, `permissions?` | Creates an employee with no password and (by default) no permissions. Returns a one-time `setup_url` |
 | `POST /employees/{id}/setup-link` | New one-time link; earlier links stop working; signs the employee out |
-| `PATCH /employees/{id}` body `full_name?`, `permissions?`, `is_active?` | Takes effect on the employee's next request |
+| `PATCH /employees/{id}` body `full_name?`, `permissions?`, `is_active?` | Takes effect on the employee's next request. A permission without the one it `requires` is `422` (also on `POST /employees`) |
 | `POST /employees/{id}/revoke-sessions` | Sign the employee out everywhere |
 | `GET /activity?limit&offset&actor_id` | Activity log, newest first |

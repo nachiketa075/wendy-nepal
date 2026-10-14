@@ -1,6 +1,6 @@
 # Attack surface
 
-**Baseline:** commit `834e59f26541e51977dcec21047423aa82f2c1a9` (the audited commit) on `release/wendy-production-review`, plus the remediation changes of 13 October 2026 described in `04-findings-and-recommendations.md` ("Status update"), committed after it on the same branch (`git log 834e59f..release/wendy-production-review`).
+**Baseline:** commit `834e59f26541e51977dcec21047423aa82f2c1a9` (the audited commit) on `release/wendy-production-review`, plus the remediation changes of 13 October 2026 described in `04-findings-and-recommendations.md` ("Status update"), committed after it on the same branch (`git log 834e59f..release/wendy-production-review`). Entries marked "added 14 Oct 2026" describe the staff inventory feature, committed after that on the same branch.
 
 Everything an outsider or a signed-in user can reach, taken from the code. Route lists come from the router
 files; line numbers point at the route decorator.
@@ -68,12 +68,25 @@ published. Running `npm run dev` directly listens on all interfaces (F-16).
 | `GET`, `PUT /settings` | 178, 183 | `booking_settings.manage`; only the owner may confirm the rules |
 | `GET /menu`; `POST`, `PATCH`, `DELETE` on `/menu/categories…`, `/menu/items…` | 266–346 | `menu.manage` |
 
+### Inventory: owner, or employee with `inventory.view` (`inventory.py`, router guard at line 33) — added 14 Oct 2026
+
+| Endpoint | Line | Extra requirement |
+|---|---|---|
+| `GET /api/staff/inventory/items`, `GET /items/{id}`, `GET /movements` | 61, 105, 138 | None beyond `inventory.view` |
+| `POST /items`, `PATCH /items/{id}` | 112, 121 | `inventory.manage_items`; version on edit; unique name |
+| `POST /items/{id}/movements` | 128 | `inventory.adjust_stock`; idempotency key; version for corrections; row lock |
+
+Writes are rate-limited to 300 per account per 15 minutes (`inventory.py:42`). Inputs: item names, reasons
+(free text, max 300 characters, control characters refused) and decimal quantities. No route edits or deletes a
+movement, and a database trigger refuses `UPDATE`/`DELETE` on `inventory_movements` (migration `0004`).
+Inventory holds no customer data and no costs; free-text reasons are visible to everyone with `inventory.view`.
+
 ### Owner only (`owner.py`, router guard at line 22)
 
 `GET /permissions` (47), `GET /employees` (52), `POST /employees` (59), `POST /employees/{id}/setup-link`
 (81), `PATCH /employees/{id}` (95), `POST /employees/{id}/revoke-sessions` (117), `GET /activity` (126).
 
-Total: 10 public, 4 signed-in, 4 customer, 17 staff, 7 owner. API documentation routes are disabled in
+Total: 10 public, 4 signed-in, 4 customer, 17 staff, 6 inventory, 7 owner. API documentation routes are disabled in
 production (`backend/app/main.py:22`, `:24`).
 
 ## 3. Cross-cutting request handling

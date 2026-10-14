@@ -115,6 +115,11 @@ dc up -d                                 # replaces API and Caddy; the database 
 curl -fsS https://YOUR-DOMAIN/api/ready
 ```
 
+`dc run --rm migrate` runs the image that `dc build` just built for the API (`wendy-backend:release`). Until
+14 Oct 2026 the migrate service had its own build, which `dc build` skipped because of its profile: on any
+release after the first, the step ran the **previous** version's migrations and changed nothing (the API then
+stayed "not ready"). Found and fixed during the inventory release rehearsal.
+
 When adding a migration, also update `EXPECTED_REVISION` in `backend/app/routers/public.py`, so the
 readiness check knows the schema the code expects.
 
@@ -158,6 +163,30 @@ On a throwaway copy of this stack at `https://localhost:8443` with a self-signed
 - No setup token, phone number or password appeared in the proxy or API logs.
 - Data survived replacing all containers; the API stopped cleanly in about a second.
 - A backup was taken and restored into a disposable database with matching row counts.
+
+### Inventory release rehearsal (14 Oct 2026)
+
+On a throwaway copy of the production stack (`https://localhost:8443`, self-signed certificate), with
+synthetic data only:
+
+- Started at the previous release (migration `0003`) with an owner, an employee with booking permissions,
+  the imported menu, confirmed booking rules and a guest booking. Then built the inventory version and
+  started it **without** migrating: `/api/ready` answered `503` and the schema stayed at `0003`. The separate
+  `migrate` step then applied `0003 → 0004`; the API became ready. Accounts, the employee's permissions
+  (no inventory added), the booking and 104 menu items were unchanged; inventory was empty.
+- 49 browser checks in Chrome passed, desktop and phone: owner inventory flows (add, stock in/out,
+  correction with reason, refused overselling, edit without stock change, locked unit, whole pieces,
+  search/category/low-stock filters, history); a restricted employee (view and record stock only) and
+  immediate revocation; customer `403` and visitor `401`; the pre-upgrade employee keeping bookings and
+  getting no inventory; a guest booking and the owner confirming it.
+- **Failure injection:** a stock entry reached the server and was recorded, but the browser's connection was
+  dropped before the reply. The page said the outcome was unknown and that pressing again is safe; pressing
+  again showed the entry once, and exactly one movement exists.
+- **Content Security Policy (report-only):** zero violations across all of the above; a deliberately
+  injected external image was reported, so the policy was being evaluated. Not enforced.
+- Encrypted backup and restore rehearsal with inventory data: see `OPERATIONS.md`.
+- Proxy, API and database logs contained none of the synthetic phone numbers, emails, names, stock reasons or
+  setup tokens.
 
 **Not rehearsed:** a real server, a real domain and certificate, real email delivery, restoring onto the
 production host, load beyond a few simultaneous requests.

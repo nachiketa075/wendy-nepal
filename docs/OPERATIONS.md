@@ -92,6 +92,15 @@ Tested on 13 Oct 2026 with synthetic data on a disposable database: an encrypted
 matching rows; the same file could not be decrypted without the private key; a file altered after backup was
 rejected by the checksum; running without a key configured wrote nothing.
 
+For databases at migration `0004` or later it also prints inventory checks: item and movement counts,
+`inventory_balance_mismatches` (items whose stock differs from the balance after their latest movement;
+must be 0), an `inventory_fingerprint` you can compare with the same query on the source, and whether stock
+history is still append-only (it tries an update and fails the rehearsal if that is accepted).
+
+Tested on 14 Oct 2026 on a throwaway production stack with synthetic inventory (2 items, 6 movements): the
+restored copy had the same counts and the same fingerprint as the source, 0 balance mismatches, and the
+append-only trigger still refused updates; the file could not be decrypted with the wrong key.
+
 ## Restoring for real
 
 Only when the production database is lost or corrupted. **This replaces current data with the backup.**
@@ -130,7 +139,8 @@ Treat this separately; it is not always possible.
   because older code ignores what it does not know. Check the migration before assuming so.
 - `alembic downgrade` is **not** a routine tool. Downgrading drops the newer tables and columns and the data
   in them. Migration `0003` refuses to downgrade while customer or employee accounts, newer booking statuses
-  or imported menu items exist, precisely so it cannot silently discard them.
+  or imported menu items exist, and `0004` refuses while any inventory item exists, precisely so neither can
+  silently discard them.
 - If a migration damaged data, the recovery path is **restore the pre-release backup** (above), accepting the
   loss of anything recorded since. This is why a backup before each release is mandatory.
 - Before any migration that changes or removes existing columns, rehearse it on a restored copy of

@@ -454,3 +454,23 @@ accepted**.
 This table does not make the site ready to launch. The items that block launch are listed in
 `security-checklist.md` and include F-03 (no backups running), F-04 (policy not enforced), F-05 (owner
 decision), and all deployment work.
+
+---
+
+## Note — 14 October 2026 (inventory release rehearsal)
+
+Not a finding of the original audit; recorded here so it is not lost.
+
+**Release migration step ran a stale image (fixed).** `docker-compose.prod.yml` gave the `migrate` service its
+own build. Because the service is in the `release` profile, `docker compose build` skipped it, so after the
+first deployment `run --rm migrate` reused the previous version's image and applied nothing. Observed on a
+throwaway production stack: after upgrading the code, the step reported no upgrade and the schema stayed at
+`0003`; the API correctly stayed "not ready" (`503`), so it did not run against the wrong schema. Fixed by
+naming the API image (`wendy-backend:release`) and having `migrate` run that image without a build of its own.
+Re-run on the same stack: `0003 → 0004` applied and the API became ready. Documented in `docs/DEPLOYMENT.md`.
+
+**Inventory feature.** Reviewed and tested as described in `threat-model.md`, `attack-surface.md` and
+`security-checklist.md` (A31–A35). It does not change the status of F-01 to F-18. During review, the stock
+history's link to accounts was changed from `RESTRICT` to `SET NULL` (with the actor's name kept), so that
+deleting an employee account, as the proposed retention policy allows, does not fail; the append-only trigger
+permits only that one change.

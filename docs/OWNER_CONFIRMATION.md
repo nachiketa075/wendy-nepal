@@ -56,7 +56,10 @@ not state them beyond the dish names.
   track availability; staff check by hand.
 - **Which email service should send password-reset emails?** Needed before customers can reset passwords themselves.
 - **Should Google sign-in or phone one-time codes be added later?** Not built; each needs its own provider.
-- **Which permissions should a typical employee have?** New employees start with none.
+- **Which permissions should a typical employee have?** New employees start with none. This includes the three
+  inventory permissions: no existing employee was given inventory access when it was added.
+- **Should inventory be used, and who records stock?** The Inventory tab starts empty. Nothing was filled in
+  from guesses or copied from the menu; real stock levels have to be entered by the shop.
 - **How long should guest and customer details, and the activity log, be kept?** Nothing is deleted automatically.
 - **Should customers who booked as guests be able to link those bookings to an account?** Not done: matching
   on phone or email alone is not safe. It would need a verified email or phone.

@@ -1,6 +1,6 @@
 # Threat model — Wendy Juice Shop
 
-**Baseline:** commit `834e59f26541e51977dcec21047423aa82f2c1a9` (the audited commit) on `release/wendy-production-review`, plus the remediation changes of 13 October 2026 described in `04-findings-and-recommendations.md` ("Status update"), committed after it on the same branch (`git log 834e59f..release/wendy-production-review`).
+**Baseline:** commit `834e59f26541e51977dcec21047423aa82f2c1a9` (the audited commit) on `release/wendy-production-review`, plus the remediation changes of 13 October 2026 described in `04-findings-and-recommendations.md` ("Status update"), committed after it on the same branch (`git log 834e59f..release/wendy-production-review`). Entries marked "added 14 Oct 2026" describe the staff inventory feature, committed after that on the same branch.
 
 Labels: **[Verified]** = control read in code and/or covered by a test that was run. **[Open]** = unresolved
 finding. **[Recommended]** = not implemented. **[Deployment]** = can only be checked on a real server, which
@@ -36,6 +36,7 @@ Operator ── SSH ──► server: CLI (create owner, import menu), backups �
 | Reset and staff setup links | Email, or passed by the owner by hand | Set a password for an account |
 | Booking records and their status | `bookings`, `booking_status_history` | The café's working diary; wrong status means a lost or phantom table |
 | Menu and booking rules | `menu_*`, `booking_settings` | Public face and intake rules |
+| Stock levels and stock history (added 14 Oct 2026) | `inventory_items`, `inventory_movements` | Internal business information; wrong figures mean wrong purchasing. Holds no customer data |
 | Secrets: database password, SMTP password, backup private key, storage credentials | `.env.production` on the server; off-server | See `secrets.md` |
 | Availability of the booking form | Whole stack | Lost requests |
 
@@ -82,6 +83,8 @@ Operator ── SSH ──► server: CLI (create owner, import menu), backups �
 | Cross-site request changes data using a signed-in user's cookie | **[Verified]** `SameSite=Strict`, CSRF token (`security.py:75-84`), origin check (`main.py`, `reject_cross_site_writes`); `test_csrf_token_and_origin_are_required_for_changes` |
 | Employee acts beyond their permissions | **[Verified]** Checked per request and per action (`security.py:114-121`, `booking_service.py:263`); `test_each_action_needs_its_own_permission` |
 | Two staff overwrite each other | **[Verified]** Row lock and version check (`booking_service.py:208-227`); `test_simultaneous_staff_actions_cannot_both_win` |
+| Stock oversold, lost or double-counted by simultaneous or retried entries | **[Verified]** Item row locked before stock is read (`inventory_service.py:93`); idempotency key per entry; version required for corrections and edits; `quantity >= 0` and whole-piece checks in the database. `test_simultaneous_stock_outs_never_oversell`, `test_simultaneous_retries_of_one_submission_record_once`, `test_simultaneous_counts_do_not_overwrite_each_other`. The first of these fails if the lock is removed (checked by temporarily removing it) |
+| Stock history rewritten to hide a loss | **[Verified]** No edit or delete route; database trigger refuses `UPDATE`/`DELETE` (migration `0004`); `test_movements_cannot_be_edited_or_deleted`. **[Open]** anyone with database access can drop the trigger; history is as trustworthy as database access is restricted |
 | SQL injection | **[Verified]** ORM and bound parameters only (reviewed; no string-built SQL in `backend/app/`) |
 | Script injected through booking text, menu text or names | **[Verified]** React escapes output; no raw-HTML rendering in `frontend/src`. **[Open]** no enforcing CSP as a second layer (F-04) |
 | Tampered dependency | **[Verified]** Backend installs only hash-pinned packages (`backend/Dockerfile:12`); frontend uses `npm ci` with its lockfile. **[Open]** base images are referenced by tag (F-18) |
@@ -92,6 +95,7 @@ Operator ── SSH ──► server: CLI (create owner, import menu), backups �
 |---|---|
 | Staff deny changing a booking | **[Verified]** Status history and activity log with actor and time (`booking_service.py:280-284`, `activity.py`); `test_activity_log_records_staff_and_owner_actions` |
 | Unnoticed sign-ins to staff accounts | **[Open]** Sign-ins are not recorded (F-12) |
+| Staff deny a stock entry | **[Verified]** Every movement stores the actor from the session (id, role, name at the time); request bodies cannot name an actor; corrections also go to the activity log. `test_actor_comes_from_the_session_not_the_request` |
 
 ### Information disclosure
 
@@ -99,6 +103,7 @@ Operator ── SSH ──► server: CLI (create owner, import menu), backups �
 |---|---|
 | Customer reads another customer's booking | **[Verified]** Every query filtered by the session's customer id (`routers/customer.py:43`, `:63`); `test_customer_sees_only_their_own_bookings` |
 | Anyone looks up a booking by reference | **[Verified]** No such endpoint; `test_no_public_endpoint_lists_or_reads_bookings` |
+| Customer or visitor reads stock levels or history | **[Verified]** Router-wide `inventory.view` guard (`routers/inventory.py:33`) runs before any read; not used by any public route. `test_visitors_and_customers_cannot_reach_any_inventory_route`, `test_inventory_never_appears_in_public_responses`; also confirmed in a browser on an isolated stack |
 | Employee without contact permission reads phone or email | **[Verified]** Fields are omitted from the response (`booking_service.py:398`, `:418-419`); `test_contact_details_are_left_out_of_every_response_without_permission`. **[Open]** free-text fields may still contain them (F-10) |
 | Customer data in application logs | **[Verified, fixed 13 Oct 2026]** Unexpected errors are logged without exception text or statement values (`safe_logging.py`, `main.py:32-68`, `database.py:24`); `tests/test_logging.py`. Confirmed with a real server process on a disposable database |
 | Customer data in the database's own log | **[Verified in code; Deployment]** `docker-compose.prod.yml:39`. Confirmed on a disposable container; must be re-set if the database moves |
@@ -121,7 +126,8 @@ Operator ── SSH ──► server: CLI (create owner, import menu), backups �
 |---|---|
 | Employee grants themselves permissions | **[Verified]** Owner-only router (`routers/owner.py:22`); profile update has no permission field; `test_employees_cannot_manage_employees_or_their_own_privileges` |
 | Employee confirms the provisional booking rules | **[Verified]** Owner-only (`routers/staff.py:187-188`) |
-| Removed employee keeps access | **[Verified]** Account checked on every request (`security.py:70`); `test_deactivation_takes_effect_immediately` |
+| Removed employee keeps access | **[Verified]** Account checked on every request (`security.py:70`); `test_deactivation_takes_effect_immediately`, `test_revoking_permissions_and_deactivating_apply_to_the_next_request` (inventory) |
+| Employee changes stock or items with view-only inventory access | **[Verified]** Each write needs its own permission on top of `inventory.view` (`routers/inventory.py:36-47`); dependent permissions cannot be saved without `inventory.view` (`routers/owner.py:47`). `test_employee_permission_combinations` |
 | Container escape after API compromise | **[Verified]** API runs as a non-root user (`backend/Dockerfile`). **[Deployment]** host hardening not assessed |
 
 ## 6. Accepted risks (owner should confirm)

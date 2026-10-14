@@ -20,8 +20,8 @@ It is a **table-reservation** site only. There is no food ordering, cart, delive
 |---|---|---|
 | Public site | `/`, `/menu` | Photos, menu from the database, business details, table request form (no account needed) |
 | Customer | `/customer/login`, `/customer/register`, `/customer` | Register, sign in, request a table, see upcoming and past bookings with live status, ask to cancel, edit profile, change password |
-| Owner | `/owner/login`, `/owner` | All bookings, confirm/decline/cancel/check-in/complete/no-show, notes, assign to employees, answer cancellation requests, booking settings, menu, team and permissions, activity log |
-| Employee | `/employee/login`, `/employee` | Only what the owner has allowed: the same dashboard with tabs, bookings, contact details and buttons limited by permission |
+| Owner | `/owner/login`, `/owner` | All bookings, confirm/decline/cancel/check-in/complete/no-show, notes, assign to employees, answer cancellation requests, booking settings, menu, inventory, team and permissions, activity log |
+| Employee | `/employee/login`, `/employee` | Only what the owner has allowed: the same dashboard with tabs, bookings, contact details, inventory and buttons limited by permission |
 | Password help | `/account/forgot`, `/account/reset` | Reset by emailed link (when email is configured); first password for invited employees |
 
 The three sign-in pages share one sign-in service. The page used never decides the role: the server reads
@@ -89,6 +89,8 @@ docker compose exec backend python -m app.cli import-menu --apply --hide-legacy 
 2. **Team:** add employees. Each starts with **no permissions**. You get a one-time link for them to choose
    their own password; pass it on yourself (no email is sent). Then tick what they may do.
 3. **Menu:** check the items marked "Please check".
+4. **Inventory (optional):** add the items the shop keeps, with the stock on hand now. It starts empty; nothing
+   is filled in for you and nothing is copied from the menu.
 
 ## Upgrading an existing installation
 
@@ -104,7 +106,12 @@ Migration `0003` is additive and keeps existing data:
 docker compose up -d --build        # runs `alembic upgrade head` on start
 ```
 
-Do not edit migrations `0001`–`0003`; add new ones. This was rehearsed on a scratch database holding an
+Migration `0004` adds the staff inventory (two new, empty tables and a trigger that keeps stock history
+append-only). It changes no existing table or row, and gives **no one** inventory access: the owner has it
+automatically, employees only once the owner ticks it. Its downgrade refuses to run while inventory items
+exist. Back up before upgrading, as for any release.
+
+Do not edit migrations `0001`–`0004`; add new ones. This was rehearsed on a scratch database holding an
 owner, bookings, menu edits and changed settings before being applied.
 
 ## Provisional booking settings
@@ -149,10 +156,30 @@ action (no new sign-in needed). Deactivating an employee signs them out at once.
 
 `bookings.view_assigned`, `bookings.view_all`, `bookings.view_contact`, `bookings.approve`,
 `bookings.decline`, `bookings.cancel`, `bookings.check_in`, `bookings.complete`, `bookings.mark_no_show`,
-`bookings.edit_notes`, `menu.manage`, `booking_settings.manage`.
+`bookings.edit_notes`, `menu.manage`, `booking_settings.manage`, `inventory.view`, `inventory.manage_items`,
+`inventory.adjust_stock`.
+
+`inventory.manage_items` and `inventory.adjust_stock` each need `inventory.view`; the server refuses to save
+one without it, and every inventory route checks `inventory.view` first. The Team screen explains this.
 
 Without `bookings.view_contact`, guests' phone numbers and emails are left out of the server's responses, not
 just hidden on screen. Employees cannot create accounts, grant permissions or change their own.
+
+## Inventory (staff only)
+
+The **Inventory** tab tracks what the shop keeps in stock (fruit, milk, coffee, cups, supplies). It is not
+part of the public site, the menu or bookings: there is no ordering, recipe or automatic deduction.
+
+- Each item has a fixed unit: `kg`, `litre` or `piece`. Quantities are exact decimals with up to 3 places;
+  pieces must be whole numbers. The unit cannot change once stock has been recorded.
+- Stock changes **only** through a recorded entry: opening stock (when the item is added), stock in, stock out,
+  or a correction (the counted quantity, with a required reason). Editing the name, category or low-stock level
+  never changes the stock. Stock can never go below zero.
+- Entries cannot be edited or deleted, in the app or in the database (a trigger refuses it). Items are archived,
+  not deleted, so their history stays readable.
+- Two people recording at once cannot oversell: the item is locked while an entry is applied. A double-click or
+  retry is recorded once. A correction or an edit made against an out-of-date view is refused and reloaded.
+- Who made each entry is taken from the signed-in account, never from the request.
 
 ## Password reset and email
 
@@ -201,13 +228,16 @@ Alembic migrations. They never touch the development database.
 docker compose --profile test run --rm tests
 ```
 
-163 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
+208 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
 sessions; CSRF and cross-site requests; customer A cannot read or change customer B's booking; guest bookings
 are not claimed by matching contact details; every employee permission and contact-field filtering; immediate
 effect of permission changes and deactivation; owner-only employee management; booking validation in Nepal
 time, closed dates and special days; idempotent and simultaneous submissions; invalid and simultaneous status
 changes; cancellation request and resolution; password reset; the repeatable menu import and owner edits; the
-shared public/owner menu; rate limiting; server logs and admin command output free of customer data.
+shared public/owner menu; rate limiting; server logs and admin command output free of customer data; inventory access for visitors, customers and every
+employee permission combination, decimal and whole-piece rules, negative stock, duplicate and simultaneous
+stock entries, history accuracy, append-only history (including after an account is deleted) and the 0004
+migration.
 
 To run them outside Docker, point `TEST_DATABASE_URL` at a database whose name ends in `_test` (the suite
 refuses anything else, because it drops and rebuilds the schema). Install the same locked packages the
@@ -233,13 +263,14 @@ backend/
     schemas.py          Request/response validation
     security.py         Password hashing, sessions, role and permission guards
     booking_service.py  Booking rules, status changes, cancellation, response shaping
+    inventory_service.py Stock items and movements: locking, idempotency, no negative stock
     menu_import.py      Repeatable import of the printed menu
     email_delivery.py   Email adapters (disabled / dev_file / smtp)
     rate_limit.py       Rate limiting stored in PostgreSQL
     cli.py              create-owner, set-password, import-menu, purge-rate-limits
-    routers/            public.py, auth.py, customer.py, staff.py, owner.py
+    routers/            public.py, auth.py, customer.py, staff.py, inventory.py, owner.py
   data/menu_cm_pdf.json The printed menu, for import
-  alembic/versions/     0001 schema, 0002 demo settings, 0003 accounts and workflow
+  alembic/versions/     0001 schema, 0002 demo settings, 0003 accounts and workflow, 0004 inventory
   tests/
 docker-compose.yml      Development stack
 docker-compose.prod.yml Production stack (Caddy + API + PostgreSQL)
