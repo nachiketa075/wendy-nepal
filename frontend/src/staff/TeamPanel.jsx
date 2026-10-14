@@ -4,6 +4,13 @@ import { whatsappLink } from '../lib/business.js'
 import { useSession } from '../lib/session.jsx'
 import { formatDateTime } from '../lib/time.js'
 
+const GROUPS = [
+  ['bookings.', 'Table requests'],
+  ['menu.', 'Menu'],
+  ['booking_settings.', 'Booking settings'],
+  ['inventory.', 'Inventory'],
+]
+
 /** Owner only: create employees, set what each may do, deactivate, sign out. */
 export default function TeamPanel() {
   const { handleAuthError } = useSession()
@@ -61,6 +68,23 @@ export default function TeamPanel() {
         New employees start with no permissions. Changes here apply to their very next action, without them signing in
         again. The server checks every permission; hiding a button is not what protects the data.
       </p>
+      <details className="mb-6 max-w-2xl rounded-[20px] border border-line bg-white/60 p-4 text-sm">
+        <summary className="cursor-pointer font-semibold">Which permissions need another one</summary>
+        <ul className="mt-3 list-disc space-y-2 pl-5">
+          <li>
+            <strong>Inventory:</strong> “Add, edit and archive inventory items” and “Record stock in, stock out and stock
+            corrections” each need “See inventory”. Those two boxes stay locked until it is ticked, and the server refuses to
+            save one without it. Neither includes the other: someone can record stock without being able to rename or archive
+            items, and the other way round.
+          </li>
+          <li>
+            <strong>Table requests:</strong> confirming, declining, cancelling, checking in, completing, no-shows, notes and
+            contact details only apply to bookings the employee can see, so also give “See all bookings” or “See bookings
+            assigned to them”.
+          </li>
+          <li>Inventory access shows stock levels and history only. It does not include bookings, guests’ details or the menu.</li>
+        </ul>
+      </details>
       {error && (
         <p role="alert" className="mb-5 rounded-lg border border-berry/40 bg-berry/5 p-3 text-sm font-medium text-berry">
           {error}
@@ -155,7 +179,11 @@ function EmployeeCard({ employee, permissions, onChanged, onSetup }) {
     }
   }
   const patch = (body, okText) => run(() => api(`/owner/employees/${employee.id}`, { method: 'PATCH', body }), okText)
-  const toggle = (key) => setSelected((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]))
+  const requires = Object.fromEntries(permissions.map((p) => [p.key, p.requires]))
+  const labelOf = Object.fromEntries(permissions.map((p) => [p.key, p.label]))
+  // Unticking a permission also unticks the ones that need it; nothing is ever ticked automatically.
+  const toggle = (key) =>
+    setSelected((list) => (list.includes(key) ? list.filter((k) => k !== key && requires[k] !== key) : [...list, key]))
 
   return (
     <li className={`rounded-[20px] border border-line bg-white/60 p-5 ${employee.is_active ? '' : 'opacity-75'}`}>
@@ -175,14 +203,35 @@ function EmployeeCard({ employee, permissions, onChanged, onSetup }) {
 
       <fieldset disabled={!employee.is_active || busy} className="mt-4">
         <legend className="field-label">Allowed to</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {permissions.map((p) => (
-            <label key={p.key} className="flex items-start gap-2 text-sm">
-              <input type="checkbox" className="mt-1 h-4 w-4 accent-forest" checked={selected.includes(p.key)} onChange={() => toggle(p.key)} />
-              <span>{p.label}</span>
-            </label>
-          ))}
-        </div>
+        {GROUPS.map(([prefix, title]) => {
+          const group = permissions.filter((p) => p.key.startsWith(prefix))
+          if (!group.length) return null
+          return (
+            <div key={prefix} className="mb-3">
+              <p className="mb-1.5 text-xs font-semibold opacity-70">{title}</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {group.map((p) => {
+                  const locked = Boolean(p.requires) && !selected.includes(p.requires)
+                  return (
+                    <label key={p.key} className={`flex items-start gap-2 text-sm ${locked ? 'opacity-60' : ''}`}>
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 accent-forest"
+                        checked={selected.includes(p.key)}
+                        disabled={locked && !selected.includes(p.key)}
+                        onChange={() => toggle(p.key)}
+                      />
+                      <span>
+                        {p.label}
+                        {p.requires && <span className="block text-xs opacity-70">Needs “{labelOf[p.requires]}”</span>}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })}
       </fieldset>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">

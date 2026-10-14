@@ -7,6 +7,7 @@ import { useSession } from '../lib/session.jsx'
 import { startPolling } from '../lib/status.jsx'
 import ActivityPanel from './ActivityPanel.jsx'
 import BookingsPanel from './BookingsPanel.jsx'
+import InventoryPanel from './InventoryPanel.jsx'
 import MenuPanel from './MenuPanel.jsx'
 import SettingsPanel from './SettingsPanel.jsx'
 import TeamPanel from './TeamPanel.jsx'
@@ -54,6 +55,7 @@ export default function StaffApp({ portal }) {
     canViewBookings && ['bookings', 'Table requests'],
     can('booking_settings.manage') && ['settings', 'Booking settings'],
     can('menu.manage') && ['menu', 'Menu'],
+    can('inventory.view') && ['inventory', 'Inventory'],
     isOwner && ['team', 'Team'],
     isOwner && ['activity', 'Activity'],
     account && account.role !== 'customer' && ['account', 'My account'],
@@ -85,6 +87,16 @@ export default function StaffApp({ portal }) {
       handleAuthError(err) // other failures: keep the last numbers and try again next time
     }
   }, [handleAuthError])
+
+  // Low-stock count for the Inventory tab label; the panel updates it as it loads.
+  const [lowStock, setLowStock] = useState(0)
+  const canViewInventory = can('inventory.view')
+  useEffect(() => {
+    if (!canViewInventory) return
+    api('/staff/inventory/items?limit=1')
+      .then((data) => setLowStock(data.low_stock_count))
+      .catch(() => {}) // the tab still works; the panel reports errors itself
+  }, [canViewInventory])
 
   const role = account?.role
   useEffect(() => {
@@ -145,6 +157,7 @@ export default function StaffApp({ portal }) {
                 <button key={id} type="button" aria-pressed={active === id} className="chip" onClick={() => setTab(id)}>
                   {label}
                   {id === 'bookings' && alerts?.pending_count ? ` · ${alerts.pending_count} waiting` : ''}
+                  {id === 'inventory' && lowStock ? ` · ${lowStock} low` : ''}
                 </button>
               ))}
             </div>
@@ -180,6 +193,7 @@ export default function StaffApp({ portal }) {
           {active === 'bookings' && <BookingsPanel refreshKey={refreshKey} onChanged={poll} />}
           {active === 'settings' && <SettingsPanel onAuthError={handleAuthError} />}
           {active === 'menu' && <MenuPanel onAuthError={handleAuthError} />}
+          {active === 'inventory' && <InventoryPanel onLowCount={setLowStock} />}
           {active === 'team' && <TeamPanel />}
           {active === 'activity' && <ActivityPanel />}
           {active === 'account' && <Profile />}
