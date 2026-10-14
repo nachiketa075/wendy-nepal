@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api", tags=["public"])
 logger = logging.getLogger("wendy.health")
 
 # The newest migration in alembic/versions. Update when adding a migration.
-EXPECTED_REVISION = "0003"
+EXPECTED_REVISION = "0004"
 
 
 @router.get("/health")

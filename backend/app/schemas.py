@@ -4,7 +4,16 @@ from decimal import Decimal
 from typing import Annotated, Literal
 
 import phonenumbers
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    PlainSerializer,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 Stripped = Annotated[str, StringConstraints(strip_whitespace=True)]
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -427,6 +436,7 @@ PermissionKey = Literal[
     "bookings.view_assigned", "bookings.view_all", "bookings.view_contact", "bookings.approve",
     "bookings.decline", "bookings.cancel", "bookings.check_in", "bookings.complete",
     "bookings.mark_no_show", "bookings.edit_notes", "menu.manage", "booking_settings.manage",
+    "inventory.view", "inventory.manage_items", "inventory.adjust_stock",
 ]
 
 
@@ -555,3 +565,152 @@ class ActivityEntry(BaseModel):
 class ActivityList(BaseModel):
     items: list[ActivityEntry]
     total: int
+
+
+# ---------- Inventory (staff only) ----------
+
+InventoryCategory = Literal["fruit_veg", "dairy", "coffee_tea", "dry_goods", "packaging", "cleaning", "other"]
+InventoryUnit = Literal["kg", "litre", "piece"]
+IdempotencyKey = Annotated[str, Field(min_length=16, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")]
+MAX_QUANTITY = Decimal("999999999.999")
+
+
+def _parse_quantity(value):
+    """Exact decimal from a JSON string or number. Floats go through their
+    shortest text form, so 0.1 stays 0.1. At most 3 decimal places."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
+        raise ValueError("Enter a number.")
+    try:
+        number = Decimal(str(value).strip())
+    except ArithmeticError:
+        raise ValueError("Enter a number, for example 2.5.") from None
+    if not number.is_finite():
+        raise ValueError("Enter a number, for example 2.5.")
+    if number.as_tuple().exponent < -3 and number != number.quantize(Decimal("0.001")):
+        raise ValueError("Use at most 3 decimal places.")
+    if number < 0:
+        raise ValueError("Cannot be negative.")
+    if number > MAX_QUANTITY:
+        raise ValueError("That number is too large.")
+    return number.quantize(Decimal("0.001"))
+
+
+def _format_quantity(value: Decimal) -> str:
+    """2.500 -> "2.5", 100.000 -> "100"; never exponent notation."""
+    text = format(value, "f")
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+QuantityOut = Annotated[Decimal, PlainSerializer(_format_quantity, return_type=str)]
+
+
+def _clean_name(value: str) -> str:
+    if _CONTROL_CHARS.search(value):
+        raise ValueError("Contains characters that are not allowed.")
+    return " ".join(value.split())
+
+
+class InventoryItemCreate(StrictModel):
+    name: Annotated[Stripped, Field(min_length=1, max_length=120)]
+    category: InventoryCategory
+    unit: InventoryUnit
+    low_stock_threshold: Decimal | None = None
+    # Stock already on the shelf. Recorded as an "opening" movement, not set silently.
+    opening_quantity: Decimal | None = None
+    idempotency_key: IdempotencyKey
+
+    _quantities = field_validator("low_stock_threshold", "opening_quantity", mode="before")(_parse_quantity)
+    _name = field_validator("name")(_clean_name)
+
+
+class InventoryItemUpdate(StrictModel):
+    """Item details only. There is deliberately no quantity field: stock changes
+    only through a recorded movement."""
+
+    version: int
+    name: Annotated[Stripped, Field(min_length=1, max_length=120)] | None = None
+    category: InventoryCategory | None = None
+    unit: InventoryUnit | None = None
+    low_stock_threshold: Decimal | None = None  # null clears it
+    is_active: bool | None = None  # false archives the item
+
+    _threshold = field_validator("low_stock_threshold", mode="before")(_parse_quantity)
+
+    @field_validator("name")
+    @classmethod
+    def _name(cls, value: str | None) -> str | None:
+        return _clean_name(value) if value is not None else None
+
+
+class InventoryMovementIn(StrictModel):
+    kind: Literal["stock_in", "stock_out", "adjustment"]
+    # stock_in / stock_out: the amount received or used (more than 0).
+    # adjustment: the quantity actually counted, which becomes the new stock.
+    quantity: Decimal
+    reason: Annotated[Stripped, Field(max_length=300)] | None = None
+    # Required for an adjustment: the item version the count was made against.
+    version: int | None = None
+    idempotency_key: IdempotencyKey
+
+    _quantity = field_validator("quantity", mode="before")(_parse_quantity)
+    _blank_reason = field_validator("reason", mode="before")(_blank_to_none)
+
+    @field_validator("reason")
+    @classmethod
+    def _plain_reason(cls, value: str | None) -> str | None:
+        if value and _CONTROL_CHARS.search(value):
+            raise ValueError("Contains characters that are not allowed.")
+        return value
+
+
+class InventoryItemOut(BaseModel):
+    id: int
+    name: str
+    category: str
+    unit: str
+    quantity: QuantityOut
+    low_stock_threshold: QuantityOut | None
+    is_low: bool
+    is_active: bool
+    version: int
+    # Once true, the unit can no longer be changed.
+    has_movements: bool
+    created_at: dt.datetime
+    updated_at: dt.datetime
+
+
+class InventoryItemList(BaseModel):
+    items: list[InventoryItemOut]
+    total: int
+    limit: int
+    offset: int
+    # Active items at or below their threshold, regardless of the filters.
+    low_stock_count: int
+
+
+class InventoryMovementOut(BaseModel):
+    id: int
+    item_id: int
+    item_name: str
+    unit: str
+    kind: str
+    quantity_change: QuantityOut
+    balance_after: QuantityOut
+    reason: str | None
+    actor_name: str
+    actor_role: str
+    created_at: dt.datetime
+
+
+class InventoryMovementList(BaseModel):
+    items: list[InventoryMovementOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class InventoryMovementResult(BaseModel):
+    item: InventoryItemOut
+    movement: InventoryMovementOut

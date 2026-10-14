@@ -59,7 +59,7 @@ def clean_state():
     with engine.begin() as conn:
         conn.execute(text(
             "TRUNCATE bookings, booking_status_history, accounts, account_sessions, password_reset_tokens, "
-            "activity_log, booking_date_overrides RESTART IDENTITY CASCADE"
+            "activity_log, booking_date_overrides, inventory_movements, inventory_items RESTART IDENTITY CASCADE"
         ))
         conn.execute(text("DELETE FROM menu_items WHERE source IN ('owner', 'owner_pdf')"))
         conn.execute(text("DELETE FROM menu_categories WHERE slug NOT IN ('drinks', 'bowls', 'bites')"))

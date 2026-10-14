@@ -9,6 +9,7 @@ from app import email_delivery
 from app.config import Settings
 from app.main import app
 from app.models import Account, AccountSession, PasswordResetToken
+from app.routers.public import EXPECTED_REVISION
 
 from .conftest import OWNER_EMAIL, PASSWORD, make_account, sign_in
 
@@ -291,7 +292,7 @@ def test_readiness_and_cache_headers(client, db):
         assert pending.status_code == 503 and pending.json() == {"status": "migration_pending"}
         assert "postgres" not in pending.text.lower()
     finally:
-        db.execute(text("UPDATE alembic_version SET version_num = '0003'"))
+        db.execute(text("UPDATE alembic_version SET version_num = :v"), {"v": EXPECTED_REVISION})
         db.commit()
 
     make_account("customer", "c@example.com")

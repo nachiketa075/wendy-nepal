@@ -14,6 +14,18 @@ PERMISSIONS: dict[str, str] = {
     "bookings.edit_notes": "Edit internal notes",
     "menu.manage": "Edit the menu",
     "booking_settings.manage": "Edit booking settings",
+    "inventory.view": "See inventory: items, stock levels and stock history",
+    "inventory.manage_items": "Add, edit and archive inventory items",
+    "inventory.adjust_stock": "Record stock in, stock out and stock corrections",
+}
+
+# Permissions that are only valid together with another one. The server
+# refuses to save an employee with a dependent permission but not what it
+# needs, and every inventory route checks inventory.view first, so the
+# dependency also holds for any row written before this rule existed.
+PERMISSION_REQUIRES: dict[str, str] = {
+    "inventory.manage_items": "inventory.view",
+    "inventory.adjust_stock": "inventory.view",
 }
 
 BOOKING_STATUSES = ("pending", "confirmed", "declined", "cancelled", "checked_in", "completed", "no_show")

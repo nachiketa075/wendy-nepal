@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import get_settings
 from .errors import ApiError, api_error_handler, http_error_handler, validation_error_handler
-from .routers import auth, customer, owner, public, staff
+from .routers import auth, customer, inventory, owner, public, staff
 from .safe_logging import log_unexpected, new_error_id
 from .security import SAFE_METHODS
 
@@ -87,4 +87,5 @@ app.include_router(public.router)
 app.include_router(auth.router)
 app.include_router(customer.router)
 app.include_router(staff.router)
+app.include_router(inventory.router)
 app.include_router(owner.router)

@@ -14,7 +14,7 @@ from ..config import get_settings
 from ..database import get_db
 from ..errors import ApiError
 from ..models import Account, AccountSession, ActivityLog
-from ..permissions import PERMISSIONS
+from ..permissions import PERMISSION_REQUIRES, PERMISSIONS
 from ..schemas import ActivityList, EmployeeCreate, EmployeeCreated, EmployeeOut, EmployeeUpdate
 from ..security import require_owner, revoke_sessions
 from .auth import create_reset_token, reset_url
@@ -44,9 +44,19 @@ def _setup(db: Session, account: Account) -> tuple[str, dt.datetime]:
     return reset_url(token), expires_at
 
 
+def _check_dependencies(permissions: list[str]) -> None:
+    """Refuse a permission without the one it needs (see PERMISSION_REQUIRES).
+    Nothing is added automatically: the owner decides every grant."""
+    for key in permissions:
+        needed = PERMISSION_REQUIRES.get(key)
+        if needed and needed not in permissions:
+            raise ApiError(422, "validation_error", "Please check the highlighted details.", {
+                "permissions": f"“{PERMISSIONS[key]}” also needs “{PERMISSIONS[needed]}”. Tick both, or neither."})
+
+
 @router.get("/permissions")
 def list_permissions() -> list[dict]:
-    return [{"key": key, "label": label} for key, label in PERMISSIONS.items()]
+    return [{"key": key, "label": label, "requires": PERMISSION_REQUIRES.get(key)} for key, label in PERMISSIONS.items()]
 
 
 @router.get("/employees", response_model=list[EmployeeOut])
@@ -64,6 +74,7 @@ def create_employee(data: EmployeeCreate, response: Response, owner: Account = D
     The reply carries a one-time setup link for the owner to pass on; no email is sent.
     """
     response.headers["Cache-Control"] = "no-store"
+    _check_dependencies(data.permissions)
     email = str(data.email).lower()
     if db.scalar(select(Account.id).where(Account.email == email)) is not None:
         raise ApiError(409, "email_taken", "Please check the highlighted details.",
@@ -100,6 +111,7 @@ def update_employee(employee_id: int, data: EmployeeUpdate, owner: Account = Dep
     if any(value is None for value in changes.values()):
         raise ApiError(422, "validation_error", "Fields cannot be empty.")
     if "permissions" in changes:
+        _check_dependencies(changes["permissions"])
         before = sorted(account.permissions or [])
         account.permissions = sorted(set(changes["permissions"]))
         activity.record(db, owner, "employee.permissions_changed", "account", account.id, before=before, after=account.permissions)

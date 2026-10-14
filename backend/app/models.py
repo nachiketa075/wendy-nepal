@@ -278,3 +278,87 @@ class MenuItem(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     category: Mapped[MenuCategory] = relationship(back_populates="items")
+
+
+INVENTORY_UNITS = ("kg", "litre", "piece")
+INVENTORY_CATEGORIES = ("fruit_veg", "dairy", "coffee_tea", "dry_goods", "packaging", "cleaning", "other")
+INVENTORY_MOVEMENT_KINDS = ("opening", "stock_in", "stock_out", "adjustment")
+
+# Quantities: up to 9 digits before the point and 3 after (grams, millilitres).
+Quantity = Numeric(12, 3)
+
+
+class InventoryItem(Base):
+    """Something the shop keeps in stock. Staff only; never part of the public menu.
+
+    `quantity` changes only together with an InventoryMovement row written in
+    the same transaction (see inventory_service.py). Items are archived, never
+    deleted, so their history stays readable.
+    """
+
+    __tablename__ = "inventory_items"
+    __table_args__ = (
+        CheckConstraint("unit IN ('kg','litre','piece')", name="ck_inventory_items_unit"),
+        CheckConstraint(
+            "category IN ('fruit_veg','dairy','coffee_tea','dry_goods','packaging','cleaning','other')",
+            name="ck_inventory_items_category",
+        ),
+        CheckConstraint("quantity >= 0", name="ck_inventory_items_quantity"),
+        CheckConstraint("low_stock_threshold IS NULL OR low_stock_threshold >= 0", name="ck_inventory_items_threshold"),
+        CheckConstraint(
+            "unit <> 'piece' OR (quantity = trunc(quantity) AND "
+            "(low_stock_threshold IS NULL OR low_stock_threshold = trunc(low_stock_threshold)))",
+            name="ck_inventory_items_whole_pieces",
+        ),
+        # Migration 0004 also adds a unique index on lower(name): one item per
+        # name, ignoring case, so a double-submitted "add item" cannot create two.
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str] = mapped_column(String(16))
+    unit: Mapped[str] = mapped_column(String(8))
+    quantity: Mapped[Decimal] = mapped_column(Quantity, default=Decimal(0), server_default="0")
+    low_stock_threshold: Mapped[Decimal | None] = mapped_column(Quantity)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Incremented on every change, so an edit or a stock count based on an old view is refused.
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=_now)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=_now, onupdate=_now)
+
+
+class InventoryMovement(Base):
+    """One change to an item's stock. Append-only: the app has no route that
+    edits or deletes these, and a database trigger refuses UPDATE and DELETE."""
+
+    __tablename__ = "inventory_movements"
+    __table_args__ = (
+        CheckConstraint("kind IN ('opening','stock_in','stock_out','adjustment')", name="ck_inventory_movements_kind"),
+        CheckConstraint("balance_after >= 0", name="ck_inventory_movements_balance"),
+        CheckConstraint(
+            "(kind IN ('opening','stock_in') AND quantity_change > 0) OR "
+            "(kind = 'stock_out' AND quantity_change < 0) OR kind = 'adjustment'",
+            name="ck_inventory_movements_sign",
+        ),
+        CheckConstraint("kind <> 'adjustment' OR reason IS NOT NULL", name="ck_inventory_movements_reason"),
+        Index("ix_inventory_movements_item_id_id", "item_id", "id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("inventory_items.id", ondelete="RESTRICT"))
+    kind: Mapped[str] = mapped_column(String(16))
+    quantity_change: Mapped[Decimal] = mapped_column(Quantity)
+    balance_after: Mapped[Decimal] = mapped_column(Quantity)
+    reason: Mapped[str | None] = mapped_column(String(300))
+    # Set from the signed-in session, never from the request. The name is kept
+    # as it was, so the history still reads correctly after a rename, or after
+    # the account is deleted (actor_id then becomes NULL; nothing else changes).
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), index=True)
+    actor_role: Mapped[str] = mapped_column(String(16))
+    actor_name: Mapped[str] = mapped_column(String(120))
+    # A retried or double-clicked submission carries the same key and is recorded once.
+    idempotency_key: Mapped[str] = mapped_column(String(64), unique=True)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), server_default=_now, index=True)
+
+    item: Mapped[InventoryItem] = relationship()
