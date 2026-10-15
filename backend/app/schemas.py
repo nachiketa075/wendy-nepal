@@ -501,8 +501,14 @@ class ProfileUpdate(StrictModel):
 
 
 class PasswordChange(StrictModel):
-    current_password: Annotated[str, Field(min_length=1, max_length=256)]
-    new_password: Password
+    """A signed-in person changing their own password. The new password is sent
+    twice so a typo cannot lock them out. Emptiness, length, matching and reuse
+    are checked in routers/auth.py (change_password), which reports each problem
+    against its own field."""
+
+    current_password: Annotated[str, Field(max_length=256)]
+    new_password: Annotated[str, Field(max_length=256)]
+    confirm_new_password: Annotated[str, Field(max_length=256)]
 
 
 class ResetRequest(StrictModel):

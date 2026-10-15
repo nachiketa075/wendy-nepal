@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { ErrorNote, Field } from '../auth/AccountPages.jsx'
+import { ErrorNote, Field, PasswordField } from '../auth/AccountPages.jsx'
 import { AreaShell } from '../auth/AuthLayout.jsx'
 import { api } from '../lib/api.js'
 import { BUSINESS } from '../lib/business.js'
@@ -281,13 +281,29 @@ function BookingCard({ booking, onChanged }) {
   )
 }
 
+const MIN_PASSWORD_LENGTH = 12
+const EMPTY_PASSWORDS = { current_password: '', new_password: '', confirm_new_password: '' }
+
+/** Mirrors the server's checks in routers/auth.py; the server still decides. */
+function passwordProblems({ current_password, new_password, confirm_new_password }) {
+  const problems = {}
+  if (!current_password) problems.current_password = 'Enter your current password.'
+  if (!new_password) problems.new_password = 'Enter a new password.'
+  else if (new_password.length < MIN_PASSWORD_LENGTH) problems.new_password = `Use at least ${MIN_PASSWORD_LENGTH} characters.`
+  else if (current_password && new_password === current_password) problems.new_password = 'Choose a password different from your current one.'
+  if (!confirm_new_password) problems.confirm_new_password = 'Enter the new password again.'
+  else if (confirm_new_password !== new_password) problems.confirm_new_password = 'The new passwords do not match.'
+  return problems
+}
+
 export function Profile() {
   const { account, apply, handleAuthError } = useSession()
   const [form, setForm] = useState({ full_name: account.full_name, phone: account.phone || '' })
   const [errors, setErrors] = useState({})
   const [note, setNote] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [passwords, setPasswords] = useState({ current_password: '', new_password: '' })
+  const [passwords, setPasswords] = useState(EMPTY_PASSWORDS)
+  const [shown, setShown] = useState({})
   const [passwordErrors, setPasswordErrors] = useState({})
   const [passwordNote, setPasswordNote] = useState(null)
   const [passwordBusy, setPasswordBusy] = useState(false)
@@ -310,17 +326,32 @@ export function Profile() {
     }
   }
 
+  const setPassword = (name) => (event) => {
+    const value = event.target.value
+    setPasswords((p) => ({ ...p, [name]: value }))
+    setPasswordErrors((e) => ({ ...e, [name]: undefined }))
+  }
+  const toggle = (name) => () => setShown((s) => ({ ...s, [name]: !s[name] }))
+
   const savePassword = async (event) => {
     event.preventDefault()
     if (passwordBusy) return
-    if (passwords.new_password.length < 12) return setPasswordErrors({ new_password: 'Use at least 12 characters.' })
-    setPasswordBusy(true)
     setPasswordNote(null)
+    // The same checks the server makes, so most mistakes are caught before sending.
+    const problems = passwordProblems(passwords)
+    if (Object.keys(problems).length) {
+      setPasswordErrors(problems)
+      setPasswordNote({ ok: false, text: 'Not changed. Please check the highlighted details.' })
+      return
+    }
+    setPasswordBusy(true)
     setPasswordErrors({})
     try {
       await api('/auth/password', { method: 'POST', body: passwords })
-      setPasswords({ current_password: '', new_password: '' })
-      setPasswordNote({ ok: true, text: 'Password changed. Other devices were signed out.' })
+      // Only now, after the server confirmed it, is the change reported.
+      setPasswords(EMPTY_PASSWORDS)
+      setShown({})
+      setPasswordNote({ ok: true, text: 'Password changed. You stay signed in here; other devices were signed out.' })
     } catch (err) {
       if (handleAuthError(err)) return
       setPasswordErrors(err.fields || {})
@@ -350,9 +381,10 @@ export function Profile() {
       </form>
       <form onSubmit={savePassword} className="rounded-[20px] bg-sage p-6 md:p-8" noValidate>
         <h2 className="mb-5 text-[32px]">Change password</h2>
-        <Field id="current-password" label="Current password" type="password" autoComplete="current-password" value={passwords.current_password} onChange={(e) => setPasswords((p) => ({ ...p, current_password: e.target.value }))} error={passwordErrors.current_password} />
-        <Field id="new-password" label="New password" type="password" autoComplete="new-password" maxLength={256} value={passwords.new_password} onChange={(e) => setPasswords((p) => ({ ...p, new_password: e.target.value }))} error={passwordErrors.new_password} hint="At least 12 characters." />
-        <button type="submit" className="pill pill-dark" disabled={passwordBusy}>
+        <PasswordField id="current-password" label="Current password" autoComplete="current-password" maxLength={256} required value={passwords.current_password} onChange={setPassword('current_password')} error={passwordErrors.current_password} shown={shown.current_password} onToggle={toggle('current_password')} />
+        <PasswordField id="new-password" label="New password" autoComplete="new-password" maxLength={256} required value={passwords.new_password} onChange={setPassword('new_password')} error={passwordErrors.new_password} hint={`At least ${MIN_PASSWORD_LENGTH} characters, different from your current password.`} shown={shown.new_password} onToggle={toggle('new_password')} />
+        <PasswordField id="confirm-new-password" label="Confirm new password" autoComplete="new-password" maxLength={256} required value={passwords.confirm_new_password} onChange={setPassword('confirm_new_password')} error={passwordErrors.confirm_new_password} shown={shown.confirm_new_password} onToggle={toggle('confirm_new_password')} />
+        <button type="submit" className="pill pill-dark" disabled={passwordBusy} aria-busy={passwordBusy}>
           {passwordBusy ? 'Saving…' : 'Change password'}
         </button>
         <Note value={passwordNote} />

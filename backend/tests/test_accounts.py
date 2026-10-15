@@ -169,9 +169,11 @@ def test_password_change_needs_the_current_password_and_signs_out_other_devices(
     here, elsewhere = sign_in("c@example.com"), sign_in("c@example.com")
     new = "a brand new long password"
 
-    assert here.post("/api/auth/password", json={"current_password": "wrong one entirely", "new_password": new}).status_code == 422
-    assert here.post("/api/auth/password", json={"current_password": PASSWORD, "new_password": "short"}).status_code == 422
-    assert here.post("/api/auth/password", json={"current_password": PASSWORD, "new_password": new}).status_code == 204
+    change = lambda current, new_password: here.post("/api/auth/password", json={  # noqa: E731
+        "current_password": current, "new_password": new_password, "confirm_new_password": new_password})
+    assert change("wrong one entirely", new).status_code == 422
+    assert change(PASSWORD, "short").status_code == 422
+    assert change(PASSWORD, new).status_code == 204
 
     assert here.get("/api/auth/me").status_code == 200
     assert elsewhere.get("/api/auth/me").status_code == 401

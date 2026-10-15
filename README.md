@@ -228,7 +228,7 @@ Alembic migrations. They never touch the development database.
 docker compose --profile test run --rm tests
 ```
 
-208 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
+222 tests cover: registration cannot create privileged accounts; sign-in, sign-out, expired and revoked
 sessions; CSRF and cross-site requests; customer A cannot read or change customer B's booking; guest bookings
 are not claimed by matching contact details; every employee permission and contact-field filtering; immediate
 effect of permission changes and deactivation; owner-only employee management; booking validation in Nepal

@@ -165,16 +165,51 @@ def update_profile(data: ProfileUpdate, session: AccountSession = Depends(requir
     return account_out(account, session)
 
 
+def _password_change_problems(data: PasswordChange) -> dict[str, str]:
+    """Problems with the form itself, before the current password is checked.
+    Messages never repeat a password."""
+    problems = {}
+    if not data.current_password:
+        problems["current_password"] = "Enter your current password."
+    if not data.new_password:
+        problems["new_password"] = "Enter a new password."
+    elif len(data.new_password) < MIN_PASSWORD_LENGTH:
+        problems["new_password"] = f"Use at least {MIN_PASSWORD_LENGTH} characters."
+    if not data.confirm_new_password:
+        problems["confirm_new_password"] = "Enter the new password again."
+    elif data.confirm_new_password != data.new_password:
+        problems["confirm_new_password"] = "The new passwords do not match."
+    return problems
+
+
 @router.post("/password", status_code=204)
 def change_password(data: PasswordChange, request: Request, session: AccountSession = Depends(require_session),
                     db: Session = Depends(get_db)):
+    """Change the signed-in account's own password.
+
+    The current password must be right; the new one must meet the policy, be
+    typed the same twice and differ from the current one. On success every other
+    session is signed out and any unused reset or setup link stops working, all
+    in one transaction. Nothing is returned, and passwords are never logged.
+    """
     account = session.account
+    problems = _password_change_problems(data)
+    if problems:
+        raise ApiError(422, "validation_error", "Please check the highlighted details.", problems)
+    # Counted only for complete submissions, so guessing the current password is limited.
     limiter.hit(f"password:account:{account.id}", limit=5, window_seconds=15 * 60)
     if not verify_password(data.current_password, account.password_hash):
         raise ApiError(422, "validation_error", "Please check the highlighted details.",
                        {"current_password": "That is not your current password."})
+    if data.new_password == data.current_password:
+        raise ApiError(422, "validation_error", "Please check the highlighted details.",
+                       {"new_password": "Choose a password different from your current one."})
+    now = dt.datetime.now(dt.UTC)
     account.password_hash = hash_password(data.new_password)
     revoke_sessions(db, account.id, keep_session_id=session.id)  # sign out everywhere else
+    for token in db.scalars(select(PasswordResetToken).where(PasswordResetToken.account_id == account.id,
+                                                             PasswordResetToken.used_at.is_(None))):
+        token.used_at = now  # an earlier reset or setup link must not undo this change
     activity.record(db, account, "account.password_changed", "account", account.id)
     db.commit()
 

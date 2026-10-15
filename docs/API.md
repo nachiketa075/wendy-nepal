@@ -43,7 +43,7 @@ returns `409 idempotency_conflict`. There is no endpoint to look a booking up by
 | `GET /me` | signed in | Account, role, permissions, `csrf_token` |
 | `POST /logout` | signed in | Ends this session |
 | `PATCH /profile` | signed in | `full_name`, `phone` only |
-| `POST /password` | signed in | `current_password`, `new_password`; signs out other devices |
+| `POST /password` | signed in | `current_password`, `new_password`, `confirm_new_password`. `204` on success. `422` with per-field messages when a field is empty, the new password is under 12 characters, the confirmation differs, the current password is wrong, or the new one equals it; nothing changes then. 5 complete attempts per 15 minutes (`429`). On success other devices are signed out and unused reset/setup links stop working |
 | `POST /password-reset/request` | anyone | Always `202` with the same answer. Says so when email delivery is not configured |
 | `POST /password-reset/confirm` | anyone | `token`, `new_password`. Tokens are single-use, short-lived, stored as hashes; all sessions are signed out |
 

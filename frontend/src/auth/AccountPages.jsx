@@ -18,6 +18,50 @@ export const ErrorNote = ({ children }) =>
     </p>
   ) : null
 
+/** A password input with a Show/Hide button. The value never leaves the input except in the form's request. */
+export function PasswordField({ id, label, error, hint, shown, onToggle, ...props }) {
+  return (
+    <div className="mb-5">
+      <label className="field-label" htmlFor={id}>
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          name={id}
+          type={shown ? 'text' : 'password'}
+          className="field pr-[78px]"
+          spellCheck={false}
+          autoCapitalize="off"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+          {...props}
+        />
+        <button
+          type="button"
+          className="absolute inset-y-0 right-0 flex items-center px-4 text-xs font-semibold uppercase tracking-[1.2px] text-forest/80 hover:text-forest"
+          aria-controls={id}
+          aria-pressed={shown}
+          aria-label={`${shown ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+          onClick={onToggle}
+        >
+          {shown ? 'Hide' : 'Show'}
+        </button>
+      </div>
+      {hint && !error && (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs opacity-70">
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p id={`${id}-error`} className="field-error">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function Field({ id, label, error, hint, ...props }) {
   return (
     <div className="mb-5">
