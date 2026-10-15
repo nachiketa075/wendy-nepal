@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { AreaShell } from '../auth/AuthLayout.jsx'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { AreaShell, SignOutButton } from '../auth/AuthLayout.jsx'
 import { Profile } from '../customer/CustomerApp.jsx'
 import { api } from '../lib/api.js'
 import { useSession } from '../lib/session.jsx'
@@ -48,7 +48,7 @@ function beep() {
  * the server; the server checks every request again regardless.
  */
 export default function StaffApp({ portal }) {
-  const { account, can, signOut, handleAuthError } = useSession()
+  const { account, can, handleAuthError } = useSession()
   const isOwner = account?.role === 'owner'
   const canViewBookings = can('bookings.view_all') || can('bookings.view_assigned')
   const tabs = [
@@ -60,7 +60,15 @@ export default function StaffApp({ portal }) {
     isOwner && ['activity', 'Activity'],
     account && account.role !== 'customer' && ['account', 'My account'],
   ].filter(Boolean)
-  const [tab, setTab] = useState(null)
+  // /owner/account and /employee/account open straight on "My account" (linked from the site header).
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const onAccountPath = pathname.replace(/\/+$/, '').endsWith('/account')
+  const [tab, setTabState] = useState(onAccountPath ? 'account' : null)
+  const setTab = (id) => {
+    setTabState(id)
+    if (onAccountPath && id !== 'account') navigate(`/${portal}`, { replace: true })
+  }
   const active = tabs.some(([id]) => id === tab) ? tab : tabs[0]?.[0]
 
   // --- alerts for new pending requests (simple polling) ---
@@ -137,9 +145,7 @@ export default function StaffApp({ portal }) {
           <span className="hidden sm:inline">
             {account.full_name} · {account.email}
           </span>
-          <button type="button" className="pill !py-2" onClick={signOut}>
-            Sign out
-          </button>
+          <SignOutButton />
         </>
       }
     >

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { ErrorNote, Field, PasswordField } from '../auth/AccountPages.jsx'
-import { AreaShell } from '../auth/AuthLayout.jsx'
+import { AreaShell, SignOutButton } from '../auth/AuthLayout.jsx'
 import { api } from '../lib/api.js'
 import { BUSINESS } from '../lib/business.js'
 import { useSession } from '../lib/session.jsx'
@@ -19,7 +19,7 @@ const STATUS_NOTE = {
 }
 
 export default function CustomerApp() {
-  const { account, signOut } = useSession()
+  const { account } = useSession()
   const { pathname } = useLocation()
 
   if (account === undefined) {
@@ -54,9 +54,7 @@ export default function CustomerApp() {
       right={
         <>
           <span className="hidden sm:inline">{account.email}</span>
-          <button type="button" className="pill !py-2" onClick={signOut}>
-            Sign out
-          </button>
+          <SignOutButton />
         </>
       }
     >

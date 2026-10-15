@@ -27,6 +27,11 @@ It is a **table-reservation** site only. There is no food ordering, cart, delive
 The three sign-in pages share one sign-in service. The page used never decides the role: the server reads
 it from the account and checks role and permissions on every request.
 
+The site header's **Sign in** menu leads to the three sign-in pages. Once the server confirms a session it
+shows that account's own pages instead (customer: My bookings, My account; staff and owner: their dashboard
+and Account settings at `/employee/account` or `/owner/account`) and **Sign out**. One browser holds one
+session, so one account, at a time.
+
 ## Run it locally
 
 You need Docker with the Compose plugin.
