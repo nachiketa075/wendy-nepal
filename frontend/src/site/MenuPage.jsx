@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { BUSINESS, MENU_PDF_URL, formatPrice } from '../lib/business.js'
 import { photoById, photoSrc, photoSrcSet } from '../lib/gallery.js'
 import { loadMenu } from '../lib/menuService.js'
+import { setPageMeta } from '../lib/seo.js'
 import Header from './Header.jsx'
 import { SafeImage } from './ui.jsx'
 import { Footer } from './Visit.jsx'
@@ -29,7 +30,7 @@ export default function MenuPage() {
   const setFilter = (slug) => setParams(slug === 'all' ? {} : { category: slug }, { replace: true, preventScrollReset: true })
 
   useEffect(() => {
-    document.title = 'Menu · Wendy Juice Shop'
+    setPageMeta('/menu')
     window.scrollTo({ top: 0, behavior: 'instant' })
     const controller = new AbortController()
     loadMenu({ signal: controller.signal })

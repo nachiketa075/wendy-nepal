@@ -123,6 +123,32 @@ stayed "not ready"). Found and fixed during the inventory release rehearsal.
 When adding a migration, also update `EXPECTED_REVISION` in `backend/app/routers/public.py`, so the
 readiness check knows the schema the code expects.
 
+## Search engines
+
+The canonical address is `https://wendyjuiceshop.com` (set in `frontend/src/lib/seo.js`, `frontend/index.html`,
+`frontend/public/robots.txt` and `frontend/public/sitemap.xml`).
+
+- `sitemap.xml` lists the two public pages, `/` and `/menu`. `robots.txt` allows everything and names the
+  sitemap. Both are real files in the build; Caddy serves files before falling back to the app.
+- The build writes `menu.html` next to `index.html` with the menu's own title, description, canonical and
+  social tags, and Caddy answers `/menu` with it (`try_files {path} {path}.html /index.html`). Other page
+  addresses still get `index.html`. A new public page needs an entry in `PAGES` (`seo.js`) and in the sitemap.
+- Sign-in, account and dashboard pages and `/api/*` are sent with `X-Robots-Tag: noindex, nofollow`. They are
+  deliberately not blocked in `robots.txt`, or crawlers could not see that header. Neither is access control.
+- `www.wendyjuiceshop.com` redirects (301) to `https://wendyjuiceshop.com`; Caddy obtains its certificate.
+- Business details for search engines (`FoodEstablishment` JSON-LD in `index.html`) contain only owner-confirmed
+  details: no opening hours, ratings or prices.
+
+After a release, check:
+
+```bash
+curl -sI https://wendyjuiceshop.com/sitemap.xml | grep -i content-type      # text/xml
+curl -s  https://wendyjuiceshop.com/robots.txt                                # robots rules, not HTML
+curl -s  https://wendyjuiceshop.com/menu | grep -o '<link rel="canonical"[^>]*>'
+curl -sI https://www.wendyjuiceshop.com/ | grep -iE '^(HTTP|location)'       # 301 to the main address
+curl -sI https://wendyjuiceshop.com/owner/login | grep -i x-robots-tag        # noindex
+```
+
 ## Content Security Policy: report-only for now
 
 `frontend/Caddyfile` sends `Content-Security-Policy-Report-Only`. **Browsers do not block anything under a

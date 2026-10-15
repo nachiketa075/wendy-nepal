@@ -282,7 +282,7 @@ frontend/
   src/auth/             Sign-in, registration, password pages
   src/customer/         Customer area
   src/staff/            Owner and employee dashboard
-  src/lib/              API client, session, menu service, business details, helpers
+  src/lib/              API client, session, menu service, business details, search metadata, helpers
   public/               Photos, logo, menu PDF
 docs/
   API.md                Endpoint reference

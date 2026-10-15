@@ -23,6 +23,12 @@
 		-Server
 	}
 
+	# Keep sign-in, account and dashboard pages, and API answers, out of search
+	# results. Crawlers must be able to fetch them to see this, so robots.txt
+	# does not block them. This is not access control; the API checks every request.
+	@noindex path /owner /owner/* /employee /employee/* /customer /customer/* /account /account/* /api/*
+	header @noindex X-Robots-Tag "noindex, nofollow"
+
 	# Requests are small JSON bodies; refuse anything large.
 	request_body {
 		max_size 256KB
@@ -43,8 +49,11 @@
 		header @hashed Cache-Control "public, max-age=31536000, immutable"
 		@pages not path /assets/* /images/* /menu/*
 		header @pages Cache-Control "no-cache"
-		# Page addresses such as /menu or /owner/login are handled by the app.
-		try_files {path} /index.html
+		# Real files first (sitemap.xml, robots.txt, images...). Then a page's own
+		# HTML file if the build wrote one (/menu -> menu.html, with that page's
+		# title and canonical address). Other page addresses such as
+		# /owner/login get index.html and are handled by the app.
+		try_files {path} {path}.html /index.html
 		file_server
 	}
 
@@ -52,4 +61,10 @@
 		output stdout
 		format json
 	}
+}
+
+# www.<site> has no content of its own: send it to the one canonical address.
+# Its DNS already points at this server; Caddy obtains its certificate itself.
+www.{$SITE_ADDRESS} {
+	redir https://{$SITE_ADDRESS}{uri} permanent
 }

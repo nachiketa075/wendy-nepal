@@ -1,0 +1,10 @@
+# Wendy Juice Shop - https://wendyjuiceshop.com
+# Everything may be crawled, including the scripts, styles, images and the
+# public menu data (/api/menu) that pages need to render. Sign-in, account and
+# dashboard pages are kept out of search results with a "noindex" header
+# (see frontend/Caddyfile), which only works if crawlers may fetch them, so they
+# are not blocked here. This file is not access control.
+User-agent: *
+Allow: /
+
+Sitemap: https://wendyjuiceshop.com/sitemap.xml
