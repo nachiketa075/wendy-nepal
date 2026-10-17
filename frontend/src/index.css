@@ -40,7 +40,7 @@
   .textlink { @apply border-b border-current pb-1 text-sm font-semibold transition-opacity hover:opacity-65; }
   .chip { @apply cursor-pointer rounded-[30px] border border-line bg-transparent px-[14px] py-[9px] text-xs text-forest transition-colors md:px-[22px] md:py-[10px] md:text-sm; }
   .chip:hover { @apply border-forest; }
-  .chip[aria-pressed='true'] { @apply border-forest bg-forest text-cream; }
+  .chip[aria-pressed='true'], .chip[aria-current='page'] { @apply border-forest bg-forest text-cream; }
 
   .field-label { @apply mb-2 block text-xs font-semibold uppercase tracking-[1.5px]; }
   .field {

@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { BUSINESS, LOGO_URL } from '../lib/business.js'
 import { photoById, photoSrc, photoSrcSet } from '../lib/gallery.js'
 import { Brand, ExternalLink, Reveal, SafeImage } from './ui.jsx'
@@ -129,17 +128,6 @@ export function Footer() {
           </ExternalLink>
           .
         </p>
-        <nav aria-label="Sign in" className="flex flex-wrap gap-x-5 gap-y-1">
-          <Link className="underline" to="/customer/login">
-            Customer sign-in
-          </Link>
-          <Link className="underline" to="/employee/login">
-            Staff sign-in
-          </Link>
-          <Link className="underline" to="/owner/login">
-            Owner sign-in
-          </Link>
-        </nav>
       </div>
     </footer>
   )

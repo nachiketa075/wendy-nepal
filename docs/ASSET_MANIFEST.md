@@ -1,6 +1,6 @@
 # Asset and source manifest
 
-Last updated: 12 October 2026.
+Last updated: 12 October 2026 (backend stage).
 
 Everything shown on the site now comes from material **supplied by the shop on 10 October 2026**: thirteen
 photographs (sent as WhatsApp JPEGs) and the printed menu `CM.pdf`. The earlier third-party photos were
@@ -42,7 +42,7 @@ are group photos of guests, so they are tagged "Guests" as well as "Inside". `17
 | Asset | Location | Source |
 |---|---|---|
 | Printed menu (3 pages) | `frontend/public/menu/wendy-juice-shop-menu.pdf` | `CM.pdf`, unchanged (5.0 MB) |
-| Menu data shown on the site | `frontend/src/data/menuFromPdf.js` | Transcribed from `CM.pdf`; each category and item records its page |
+| Menu import file | `backend/data/menu_cm_pdf.json` | Transcribed from `CM.pdf`; each category records its page. Imported into the database with `python -m app.cli import-menu` |
 | Logo | `frontend/public/images/wendy-juice-shop-logo.webp` (and `.png`) | The 482×482 logo image embedded in `CM.pdf` page 1, extracted with its transparency |
 
 The logo is used in the footer and on the sign-in pages. The header keeps the existing "wendy" wordmark, which

@@ -3,12 +3,64 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Wendy Juice Shop · A little freshness in Pokhara</title>
-    <meta name="description" content="Fresh juices, smoothie bowls and slow mornings at Wendy Juice Shop, Lakeside, Pokhara. Request a table online." />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23163d2d'/%3E%3Ctext x='10' y='47' font-size='44' font-family='Georgia' fill='%23e5ed88'%3Ew%3C/text%3E%3C/svg%3E" />
+    <!-- Homepage metadata. Keep in step with PAGES['/'] in src/lib/seo.js (the build checks it);
+         other public pages get their own copy of this file with their values (vite.config.js). -->
+    <title>Wendy Juice Shop Pokhara | Fresh Juices &amp; Smoothies</title>
+    <meta name="description" content="Wendy Juice Shop in Lakeside, Pokhara, Nepal: fresh juices, smoothies, smoothie bowls and breakfast. See the menu and request a table online." />
+    <link rel="canonical" href="https://wendyjuiceshop.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Wendy Juice Shop" />
+    <meta property="og:url" content="https://wendyjuiceshop.com/" />
+    <meta property="og:title" content="Wendy Juice Shop Pokhara | Fresh Juices &amp; Smoothies" />
+    <meta property="og:description" content="Wendy Juice Shop in Lakeside, Pokhara, Nepal: fresh juices, smoothies, smoothie bowls and breakfast. See the menu and request a table online." />
+    <meta property="og:image" content="https://wendyjuiceshop.com/images/original/wendy-exterior-signboard.jpg" />
+    <meta property="og:image:width" content="1600" />
+    <meta property="og:image:height" content="1200" />
+    <meta property="og:image:alt" content="The Wendy Juice Shop signboard in Lakeside, Pokhara" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Wendy Juice Shop Pokhara | Fresh Juices &amp; Smoothies" />
+    <meta name="twitter:description" content="Wendy Juice Shop in Lakeside, Pokhara, Nepal: fresh juices, smoothies, smoothie bowls and breakfast. See the menu and request a table online." />
+    <meta name="twitter:image" content="https://wendyjuiceshop.com/images/original/wendy-exterior-signboard.jpg" />
+    <meta name="twitter:image:alt" content="The Wendy Juice Shop signboard in Lakeside, Pokhara" />
+
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png" />
+    
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" />
+
+    <!-- Business details for search engines. Only details the owner confirmed
+         (src/lib/business.js, docs/OWNER_CONFIRMATION.md): no opening hours,
+         ratings or prices until they are confirmed. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FoodEstablishment",
+        "@id": "https://wendyjuiceshop.com/#business",
+        "name": "Wendy Juice Shop",
+        "url": "https://wendyjuiceshop.com/",
+        "logo": "https://wendyjuiceshop.com/images/wendy-juice-shop-logo.png",
+        "image": [
+          "https://wendyjuiceshop.com/images/original/wendy-exterior-signboard.jpg",
+          "https://wendyjuiceshop.com/images/original/wendy-fruit-bowl-close-up.jpg"
+        ],
+        "description": "Fresh juices, smoothies, smoothie bowls and breakfast in Lakeside, Pokhara, Nepal.",
+        "telephone": "+977-985-6031094",
+        "email": "kushwaha_3@hotmail.com",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Pahari Marga / 15th Street, Lakeside",
+          "addressLocality": "Pokhara",
+          "postalCode": "33700",
+          "addressCountry": "NP"
+        },
+        "hasMenu": "https://wendyjuiceshop.com/menu",
+        "servesCuisine": ["Juices", "Smoothies", "Breakfast"],
+        "acceptsReservations": true,
+        "sameAs": ["https://www.facebook.com/wendyjuiceshop/"]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { BUSINESS, MENU_PDF_URL, formatPrice } from '../lib/business.js'
 import { photoById, photoSrc, photoSrcSet } from '../lib/gallery.js'
 import { loadMenu } from '../lib/menuService.js'
+import { setPageMeta } from '../lib/seo.js'
 import Header from './Header.jsx'
 import { SafeImage } from './ui.jsx'
 import { Footer } from './Visit.jsx'
@@ -22,19 +23,19 @@ function matches(item, category, query) {
 
 /** The full menu, on its own page at /menu. */
 export default function MenuPage() {
-  const [state, setState] = useState({ status: 'loading', categories: [], source: null })
+  const [state, setState] = useState({ status: 'loading', categories: [] })
   const [params, setParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const filter = params.get('category') || 'all'
   const setFilter = (slug) => setParams(slug === 'all' ? {} : { category: slug }, { replace: true, preventScrollReset: true })
 
   useEffect(() => {
-    document.title = 'Menu · Wendy Juice Shop'
+    setPageMeta('/menu')
     window.scrollTo({ top: 0, behavior: 'instant' })
     const controller = new AbortController()
     loadMenu({ signal: controller.signal })
       .then((data) => setState({ status: 'ready', ...data }))
-      .catch((err) => err.name !== 'AbortError' && setState({ status: 'error', categories: [], source: null }))
+      .catch((err) => err.name !== 'AbortError' && setState({ status: 'error', categories: [] }))
     return () => controller.abort()
   }, [])
 
@@ -208,11 +209,9 @@ export default function MenuPage() {
 
               <p className="mx-auto mt-16 max-w-[1180px] border-t border-line pt-6 text-center text-xs opacity-75">
                 Prices are in Nepalese rupees. Ask us about today’s availability.{' '}
-                {state.source === 'pdf' && (
-                  <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
-                    Printed menu (PDF)<span className="sr-only"> (opens in a new tab)</span>
-                  </a>
-                )}
+                <a className="underline" href={MENU_PDF_URL} target="_blank" rel="noopener noreferrer">
+                  Printed menu (PDF)<span className="sr-only"> (opens in a new tab)</span>
+                </a>
               </p>
             </div>
 

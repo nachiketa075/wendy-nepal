@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LOGO_URL } from '../lib/business.js'
+import { useSession } from '../lib/session.jsx'
 import { Brand, SafeImage } from '../site/ui.jsx'
 
 const AREAS = [
@@ -8,6 +9,35 @@ const AREAS = [
   ['/employee/login', 'Staff'],
   ['/owner/login', 'Owner'],
 ]
+
+export const SIGN_OUT_FAILED = 'Could not sign out. Check your connection and try again.'
+
+/** Ends the session on the server; says so if that did not work. */
+export function SignOutButton({ className = 'pill !py-2' }) {
+  const { signOut } = useSession()
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const click = async () => {
+    if (busy) return
+    setBusy(true)
+    setFailed(false)
+    const ok = await signOut()
+    setBusy(false) // harmless if the area has already unmounted
+    setFailed(!ok)
+  }
+  return (
+    <>
+      <button type="button" className={className} disabled={busy} onClick={click}>
+        {busy ? 'Signing out…' : 'Sign out'}
+      </button>
+      {failed && (
+        <span role="alert" className="text-sm font-medium text-berry">
+          {SIGN_OUT_FAILED}
+        </span>
+      )}
+    </>
+  )
+}
 
 /** Shared frame for the three sign-in pages and the signed-in areas. */
 export function AreaShell({ tagline, title, right, banner, children }) {

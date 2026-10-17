@@ -1,3 +1,13 @@
 {
-  "rewrites": [{ "source": "/((?!api/|assets/|images/|menu/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/((?!api/|assets/|images/|menu/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "release/**": false
+    }
+  }
 }

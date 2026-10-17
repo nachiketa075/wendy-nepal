@@ -1,0 +1,70 @@
+# SITE_ADDRESS is the public host name, e.g. "wendyjuice.example". With a real
+# host name Caddy obtains and renews the HTTPS certificate by itself (ports 80
+# and 443 must reach this server and DNS must point at it).
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), camera=(), microphone=()"
+		# Content Security Policy, REPORT-ONLY: browsers evaluate it and note
+		# violations in their console but do NOT block anything yet. To enforce
+		# it, rename the header to Content-Security-Policy (see docs/DEPLOYMENT.md).
+		#   scripts   our own files only (no inline script, no eval)
+		#   styles    our stylesheet + Google Fonts' stylesheet; style="" attributes
+		#             are allowed because two components size images that way
+		#   images    our own files and the inline (data:) favicon
+		#   fonts     Google Fonts' font files
+		#   connect   our own /api only
+		Content-Security-Policy-Report-Only "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src https://fonts.gstatic.com; connect-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# Keep sign-in, account and dashboard pages, and API answers, out of search
+	# results. Crawlers must be able to fetch them to see this, so robots.txt
+	# does not block them. This is not access control; the API checks every request.
+	@noindex path /owner /owner/* /employee /employee/* /customer /customer/* /account /account/* /api/*
+	header @noindex X-Robots-Tag "noindex, nofollow"
+
+	# Requests are small JSON bodies; refuse anything large.
+	request_body {
+		max_size 256KB
+	}
+
+	# The API: same origin as the site, so the session cookie is first-party.
+	handle /api/* {
+		reverse_proxy backend:8000 {
+			health_uri /api/health
+			health_interval 15s
+		}
+	}
+
+	handle {
+		root * /srv
+		# Fingerprinted build files never change; everything else is revalidated.
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/* /images/* /menu/*
+		header @pages Cache-Control "no-cache"
+		# Real files first (sitemap.xml, robots.txt, images...). Then a page's own
+		# HTML file if the build wrote one (/menu -> menu.html, with that page's
+		# title and canonical address). Other page addresses such as
+		# /owner/login get index.html and are handled by the app.
+		try_files {path} {path}.html /index.html
+		file_server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# www.<site> has no content of its own: send it to the one canonical address.
+# Its DNS already points at this server; Caddy obtains its certificate itself.
+www.{$SITE_ADDRESS} {
+	redir https://{$SITE_ADDRESS}{uri} permanent
+}

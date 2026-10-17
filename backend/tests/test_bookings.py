@@ -230,7 +230,7 @@ def test_no_public_endpoint_lists_or_reads_bookings(client):
 
     for path in ("/api/bookings", f"/api/bookings/{reference}", "/api/bookings/1"):
         assert client.get(path).status_code in (404, 405)
-    for path in ("/api/owner/bookings", "/api/owner/bookings/1"):
+    for path in ("/api/staff/bookings", "/api/staff/bookings/1", "/api/customer/bookings"):
         response = client.get(path)
         assert response.status_code == 401
         assert "Test Guest" not in response.text
@@ -245,3 +245,52 @@ def test_public_config_exposes_rules_but_no_guest_data(client):
     assert (config["min_party_size"], config["max_party_size"]) == (1, 8)
     assert len(config["windows"]) == 7
     assert "Test Guest" not in str(config)
+
+
+def test_reusing_an_idempotency_key_with_different_details_is_a_conflict(client, db):
+    key = str(uuid.uuid4())
+    assert client.post("/api/bookings", json=booking_payload(idempotency_key=key)).status_code == 201
+
+    changed = client.post("/api/bookings", json=booking_payload(idempotency_key=key, party_size=5))
+
+    assert changed.status_code == 409
+    assert changed.json()["error"]["code"] == "idempotency_conflict"
+    assert count_bookings(db) == 1
+    assert db.scalar(select(Booking)).party_size == 2  # the stored request is untouched
+
+
+def test_new_request_starts_its_status_history(client, db):
+    client.post("/api/bookings", json=booking_payload())
+    rows = db.execute(text("SELECT from_status, to_status, actor_role FROM booking_status_history")).all()
+    assert rows == [(None, "pending", "guest")]
+
+
+def test_closed_dates_and_special_day_windows(client, db):
+    closed, special = future_date(2), future_date(3)
+    db.execute(text("INSERT INTO booking_date_overrides (date, is_closed) VALUES (:d, true)"), {"d": closed})
+    db.execute(
+        text("INSERT INTO booking_date_overrides (date, is_closed, start_time, end_time) VALUES (:d, false, '12:00', '14:00')"),
+        {"d": special},
+    )
+    db.commit()
+
+    refused = client.post("/api/bookings", json=booking_payload(requested_date=closed.isoformat()))
+    assert refused.status_code == 422 and "requested_date" in refused.json()["error"]["fields"]
+
+    outside = client.post("/api/bookings", json=booking_payload(requested_date=special.isoformat(), requested_time="10:00"))
+    assert outside.status_code == 422 and "requested_time" in outside.json()["error"]["fields"]
+    inside = client.post("/api/bookings", json=booking_payload(requested_date=special.isoformat(), requested_time="13:00"))
+    assert inside.status_code == 201
+
+    config = client.get("/api/booking/config").json()
+    assert [(o["date"], o["is_closed"]) for o in config["overrides"]] == [(closed.isoformat(), True), (special.isoformat(), False)]
+    assert "note" not in config["overrides"][0]
+
+
+def test_rate_limit_is_shared_through_the_database(client, db):
+    """Counters live in PostgreSQL, so they hold across API workers."""
+    for i in range(5):
+        client.post("/api/bookings", json=booking_payload(requested_time=f"{9 + i:02d}:00"))
+    assert db.execute(text("SELECT count(*) FROM rate_limit_events")).scalar() >= 5
+    # The stored keys are digests, not addresses.
+    assert all(len(k) == 64 for (k,) in db.execute(text("SELECT key_hash FROM rate_limit_events")))

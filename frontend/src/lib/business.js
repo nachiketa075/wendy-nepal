@@ -20,6 +20,9 @@ export function formatPrice(value) {
   return `${CURRENCY.prefix} ${Number(value).toLocaleString(CURRENCY.locale, { maximumFractionDigits: 2 })}`
 }
 
+/** Opens WhatsApp with a message ready to send. Nothing is sent until the person presses send. */
+export const whatsappLink = (digits, text) => `https://wa.me/${String(digits).replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}`
+
 export const MENU_PDF_URL = '/menu/wendy-juice-shop-menu.pdf'
 export const LOGO_URL = '/images/wendy-juice-shop-logo.webp'
 

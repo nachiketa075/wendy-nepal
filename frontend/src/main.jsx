@@ -1,42 +1,41 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './index.css'
-import ComingSoonLogin from './auth/ComingSoonLogin.jsx'
-import { PREVIEW_ENABLED } from './lib/preview.js'
+import { ForgotPage, LoginPage, RegisterPage, ResetPage } from './auth/AccountPages.jsx'
+import { SessionProvider } from './lib/session.jsx'
 import MenuPage from './site/MenuPage.jsx'
 import SitePage from './site/SitePage.jsx'
 
-const OwnerApp = React.lazy(() => import('./owner/OwnerApp.jsx'))
+const StaffApp = React.lazy(() => import('./staff/StaffApp.jsx'))
+const CustomerApp = React.lazy(() => import('./customer/CustomerApp.jsx'))
 
-// Customer and employee areas have no backend yet. Their screens exist only as a
-// development preview with fictional data; in a normal build these imports are
-// never created and the routes send visitors to the (disabled) sign-in pages.
-const CustomerPreview = PREVIEW_ENABLED ? React.lazy(() => import('./preview/CustomerPreview.jsx')) : null
-const EmployeePreview = PREVIEW_ENABLED ? React.lazy(() => import('./preview/EmployeePreview.jsx')) : null
+const lazyPage = (element) => <React.Suspense fallback={<p className="p-10">Loading…</p>}>{element}</React.Suspense>
 
-const lazyPage = (Page) => (
-  <React.Suspense fallback={<p className="p-10">Loading…</p>}>
-    <Page />
-  </React.Suspense>
-)
-
+// Three separate sign-in pages share one sign-in service. Which page was used
+// never decides the role: the server reports it, and each area below checks it.
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        {/* /owner and /owner/login share the existing, real owner session. */}
-        <Route path="/owner/*" element={lazyPage(OwnerApp)} />
+      <SessionProvider>
+        <Routes>
+          <Route path="/owner/login" element={<LoginPage portal="owner" />} />
+          <Route path="/owner/*" element={lazyPage(<StaffApp portal="owner" />)} />
 
-        <Route path="/customer/login" element={<ComingSoonLogin area="customer" />} />
-        <Route path="/customer/*" element={CustomerPreview ? lazyPage(CustomerPreview) : <Navigate to="/customer/login" replace />} />
+          <Route path="/employee/login" element={<LoginPage portal="employee" />} />
+          <Route path="/employee/*" element={lazyPage(<StaffApp portal="employee" />)} />
 
-        <Route path="/employee/login" element={<ComingSoonLogin area="employee" />} />
-        <Route path="/employee/*" element={EmployeePreview ? lazyPage(EmployeePreview) : <Navigate to="/employee/login" replace />} />
+          <Route path="/customer/login" element={<LoginPage portal="customer" />} />
+          <Route path="/customer/register" element={<RegisterPage />} />
+          <Route path="/customer/*" element={lazyPage(<CustomerApp />)} />
 
-        <Route path="/menu" element={<MenuPage />} />
-        <Route path="*" element={<SitePage />} />
-      </Routes>
+          <Route path="/account/forgot" element={<ForgotPage />} />
+          <Route path="/account/reset" element={<ResetPage />} />
+
+          <Route path="/menu" element={<MenuPage />} />
+          <Route path="*" element={<SitePage />} />
+        </Routes>
+      </SessionProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { setPageMeta } from '../lib/seo.js'
 import Booking from './Booking.jsx'
 import Feedback from './Feedback.jsx'
 import Gallery from './Gallery.jsx'
@@ -25,7 +26,7 @@ function useHashScroll() {
 export default function SitePage() {
   useHashScroll()
   useEffect(() => {
-    document.title = 'Wendy Juice Shop · A little freshness in Pokhara'
+    setPageMeta('/')
   }, [])
   return (
     <div className="shell">

@@ -1,9 +1,18 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.backup.example
 node_modules/
 dist/
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+backend/dev-mailbox/
+
+# Backups and production settings hold real data and secrets
+backups/
+*.dump
+*.sql
